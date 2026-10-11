@@ -82,6 +82,8 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;font-size:.88rem}
 .facts div{background:var(--acc2);border-radius:8px;padding:8px}.facts span{display:block;color:var(--mut);font-size:.75rem}
 .links a{color:var(--acc);margin-right:12px;font-size:.88rem}
+.alert{background:var(--warn2);border-left:4px solid var(--warn);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:.9rem}
+.alert b{color:var(--hi)}.alert ul{margin:4px 0 0;padding-left:1.2em}
 </style>
 </head>
 <body>
@@ -94,6 +96,7 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <button data-t="calc">🧮 試算</button>
 <button data-t="bank">🏦 銀行比價</button>
 <button data-t="guide">📘 首購須知</button>
+<button data-t="notify">🔔 提醒</button>
 <button data-t="data">💾 備份</button>
 </nav></div></header>
 
@@ -108,6 +111,7 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <p class="sub" style="margin:10px 0 4px">資料來自公開建案網站，以實際契約為準。照片請用你自己拍的或從建案網站存的圖，只會存在這支手機。</p>
 <div class="links"><a href="https://build.myhousing.com.tw/215965/" target="_blank" rel="noopener">住展雜誌</a><a href="https://newhouse.591.com.tw/home/housing/detail?hid=132959" target="_blank" rel="noopener">591 新建案</a><a href="https://community.houseprice.tw/building/163601/" target="_blank" rel="noopener">實價登錄</a></div>
 <div class="row" style="margin-top:10px">預計交屋日 <input type="date" id="moveD"></div></div>
+<div id="dueBox"></div>
 <div class="stats">
 <div class="stat">整體進度<b id="sPct">0%</b><div class="bar"><i id="sBar"></i></div></div>
 <div class="stat">未完成<b id="sOpen">0</b></div>
@@ -209,6 +213,22 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 </dl></div>
 </section>
 
+<!-- NOTIFY -->
+<section class="tab" id="notify">
+<div class="card"><h2>到期前通知</h2>
+<p>每次打開 App 時，會檢查有沒有快到期或逾期的待辦，跳出手機通知，並在待辦頁最上方顯示提醒。</p>
+<div class="row" style="margin:8px 0"><button class="b" id="nOn">開啟通知</button><span class="sub" id="nSt"></span></div>
+<div class="row">提前 <select id="nDays"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>7</option></select> 天提醒</div>
+<div class="row" style="margin-top:8px"><button class="g" id="nTest">送一則測試通知</button></div>
+<div class="warnbox">限制：網頁 App 沒有伺服器，<b>App 沒打開時無法主動推播</b>。要「不開 App 也會準時響」，請用下面的行事曆提醒。<br>iPhone 需 iOS 16.4 以上，且必須先「加入主畫面」再從主畫面開啟，才能開通知。</div>
+</div>
+<div class="card"><h2>📅 加入手機行事曆（最可靠）</h2>
+<p>把有設到期日的待辦匯出成 .ics，用手機行事曆開啟匯入。每項會在到期日前一天早上 9:00 與當天早上 9:00 響鈴提醒，App 關著也有效。</p>
+<div class="row"><button class="b" id="icsAll">匯出全部未完成待辦</button></div>
+<p class="sub">單一項目也可以在待辦清單點 📅 個別加入。改了日期需要重新匯出。</p>
+</div>
+</section>
+
 <!-- DATA -->
 <section class="tab" id="data">
 <div class="card"><h2>備份與還原</h2>
@@ -278,7 +298,7 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
 PH.forEach((p,i)=>{$('aP').add(new Option(p,i));$('fP').add(new Option(p,i))});
 const today=()=>new Date(new Date().toDateString());
 let editing=null;
-function render(){
+var render=function(){
  const fs=$('fS').value,fp=$('fP').value,fi=$('fI').checked,q=$('fQ').value.trim();
  const now=today(),wk=new Date(+now+7*864e5);
  const ts=S.tasks,done=ts.filter(t=>t.done).length;
@@ -301,7 +321,7 @@ function render(){
     h+=`<div class="task ${t.done?'done':''}" data-id="${t.id}">
 <input type="checkbox" ${t.done?'checked':''} data-a="tog">
 <div><div class="t">${esc(t.t)}</div><div class="meta">${t.r===1?'<span class="tag p1">重要</span>':''}${t.d?`<span class="${isLate?'late':''}">📅 ${t.d}${isLate?' 已逾期':''}</span>`:''}</div>${t.n?`<div class="note">${esc(t.n)}</div>`:''}</div>
-<div class="acts"><button data-a="ed" title="編輯">✏️</button><button data-a="del" title="刪除">🗑</button></div>
+<div class="acts">${t.d&&!t.done?'<button data-a="ics" title="加入行事曆">📅</button>':''}<button data-a="ed" title="編輯">✏️</button><button data-a="del" title="刪除">🗑</button></div>
 ${editing===t.id?`<div class="edit"><input data-f="t" value="${esc(t.t)}"><div class="row"><select data-f="p">${PH.map((x,i)=>`<option value="${i}" ${i===t.p?'selected':''}>${x}</option>`).join('')}</select><input type="date" data-f="d" value="${t.d}"><select data-f="r"><option value="2">一般</option><option value="1" ${t.r===1?'selected':''}>重要</option></select></div><textarea data-f="n" rows="2" placeholder="備註">${esc(t.n)}</textarea><div class="row"><button class="b" data-a="sv">儲存</button><button class="g" data-a="cx">取消</button></div></div>`:''}
 </div>`});
   }
@@ -315,6 +335,7 @@ $('list').onclick=e=>{
  if(a==='tog')t.done=e.target.checked;
  if(a==='ed')editing=t.id;
  if(a==='cx')editing=null;
+ if(a==='ics'){dlICS([t],t.t);return}
  if(a==='del'&&confirm('刪除「'+t.t+'」？'))S.tasks=S.tasks.filter(x=>x!==t);
  if(a==='sv'){const g=f=>row.querySelector(`[data-f=${f}]`).value;t.t=g('t')||t.t;t.p=+g('p');t.d=g('d');t.r=+g('r');t.n=g('n');editing=null}
  save();render()};
@@ -367,6 +388,39 @@ heroF.onchange=e=>{const fl=e.target.files[0];if(!fl)return;const im=new Image()
 heroX.onclick=()=>{try{localStorage.removeItem(HK)}catch(e){}showHero()};
 moveD.value=S.moveD||'';const cdT=()=>{if(!S.moveD){cd.textContent='';return}const n=Math.ceil((new Date(S.moveD)-today())/864e5);cd.textContent=n>=0?`距離交屋還有 ${n} 天`:`已交屋 ${-n} 天`};
 moveD.oninput=()=>{S.moveD=moveD.value;save();cdT()};showHero();cdT();
+// ===== 到期提醒 =====
+const NK='presale-loan-notified';
+const dueList=()=>{const now=today(),lim=new Date(+now+(+(S.nDays||3))*864e5);
+ return S.tasks.filter(t=>!t.done&&t.d&&new Date(t.d)<=lim).map(t=>({t,n:Math.round((new Date(t.d)-now)/864e5)})).sort((a,b)=>a.n-b.n)};
+const lbl=n=>n<0?`逾期 ${-n} 天`:n===0?'今天到期':`${n} 天後到期`;
+function dueBanner(){const L=dueList();dueBox.innerHTML=L.length?`<div class="alert">🔔 <b>${L.length} 項</b>需要注意<ul>${L.slice(0,6).map(x=>`<li>${esc(x.t.t)}　<small class="${x.n<0?'late':''}">${lbl(x.n)}</small></li>`).join('')}</ul></div>`:''}
+async function notifyDue(){
+ if(!('Notification' in window)||Notification.permission!=='granted')return;
+ const day=new Date().toDateString();let sent={};try{sent=JSON.parse(localStorage.getItem(NK))||{}}catch(e){}
+ const L=dueList().filter(x=>sent[x.t.id]!==day);if(!L.length)return;
+ const reg=await navigator.serviceWorker?.getRegistration();
+ const title=L.length===1?L[0].t.t:`有 ${L.length} 項待辦快到期`;
+ const body=L.slice(0,4).map(x=>`${lbl(x.n)}｜${x.t.t}`).join('\n');
+ const opt={body,icon:'icon-192.png',badge:'icon-192.png',tag:'due'};
+ reg?reg.showNotification(title,opt):new Notification(title,opt);
+ L.forEach(x=>sent[x.t.id]=day);try{localStorage.setItem(NK,JSON.stringify(sent))}catch(e){}}
+function nStatus(){const p='Notification' in window?Notification.permission:'unsupported';
+ nSt.textContent={granted:'✅ 已開啟',denied:'❌ 已封鎖，請到手機設定開啟',default:'尚未開啟',unsupported:'此瀏覽器不支援（iPhone 請先加入主畫面）'}[p];nOn.hidden=p==='granted'}
+nOn.onclick=async()=>{if(!('Notification' in window))return nStatus();await Notification.requestPermission();nStatus();notifyDue()};
+nTest.onclick=async()=>{if(Notification?.permission!=='granted')return alert('請先開啟通知');const r=await navigator.serviceWorker?.getRegistration();const o={body:'通知功能正常 ✅',icon:'icon-192.png'};r?r.showNotification('對保助手',o):new Notification('對保助手',o)};
+nDays.value=S.nDays||'3';nDays.onchange=()=>{S.nDays=nDays.value;save();dueBanner()};
+// ===== 行事曆 .ics =====
+function dlICS(ts,name){const pad=n=>String(n).padStart(2,'0');const stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+ const ev=ts.map(t=>{const d=t.d.replace(/-/g,''),nx=new Date(t.d);nx.setDate(nx.getDate()+1);const d2=`${nx.getFullYear()}${pad(nx.getMonth()+1)}${pad(nx.getDate())}`;
+ const tx=x=>String(x).replace(/[\\,;]/g,m=>'\\'+m).replace(/\n/g,'\\n');
+ return ['BEGIN:VEVENT',`UID:${t.id}@presale-loan`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d2}`,`SUMMARY:【對保】${tx(t.t)}`,`DESCRIPTION:${tx(PH[t.p]+(t.n?'\n'+t.n:''))}`,
+ 'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:明天到期','TRIGGER:-PT15H','END:VALARM','BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:今天到期','TRIGGER:PT9H','END:VALARM','END:VEVENT'].join('\r\n')});
+ const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//presale-loan//TW','CALSCALE:GREGORIAN',...ev,'END:VCALENDAR'].join('\r\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download=(name||'對保待辦').slice(0,30)+'.ics';a.click()}
+icsAll.onclick=()=>{const L=S.tasks.filter(t=>!t.done&&t.d);if(!L.length)return alert('還沒有設到期日的未完成待辦');dlICS(L,'對保待辦')};
+const _r=render;render=function(){_r();dueBanner()};
+nStatus();dueBanner();notifyDue();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){dueBanner();notifyDue()}});
 if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js');
 let dp;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;$('inst').style.display='inline-block'});
 $('inst').onclick=async()=>{if(!dp)return;dp.prompt();await dp.userChoice;dp=null;$('inst').style.display='none'};
