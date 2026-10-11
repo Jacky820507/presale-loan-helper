@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 340" preserveAspectRatio="xMidYMid slice">
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6c99b"/><stop offset=".55" stop-color="#e9a37f"/><stop offset="1" stop-color="#5d8f86"/></linearGradient>
+<linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe7c2"/><stop offset="1" stop-color="#9fc7c0"/></linearGradient></defs>
+<rect width="800" height="340" fill="url(#sky)"/>
+<circle cx="620" cy="110" r="46" fill="#fff3dc" opacity=".85"/>
+<path d="M0 230 Q120 170 240 215 T480 200 T800 210 V340 H0Z" fill="#7aa79a" opacity=".55"/>
+<g fill="#4c7a70" opacity=".7"><rect x="40" y="170" width="60" height="120"/><rect x="110" y="200" width="45" height="90"/><rect x="590" y="185" width="70" height="105"/><rect x="670" y="160" width="50" height="130"/><rect x="730" y="205" width="60" height="85"/></g>
+<g><rect x="300" y="52" width="200" height="248" fill="#f4efe6"/><rect x="300" y="52" width="200" height="10" fill="#c8a978"/>
+<g fill="url(#gl)">
+<rect x="314" y="72" width="36" height="12"/><rect x="358" y="72" width="36" height="12"/><rect x="406" y="72" width="36" height="12"/><rect x="450" y="72" width="36" height="12"/>
+</g>
+<g id="fl" fill="url(#gl)"><rect x="314" y="72" width="36" height="12"/><rect x="358" y="72" width="36" height="12"/><rect x="406" y="72" width="36" height="12"/><rect x="450" y="72" width="36" height="12"/></g>
+<use href="#fl" y="16.5"/><use href="#fl" y="33"/><use href="#fl" y="49.5"/><use href="#fl" y="66"/><use href="#fl" y="82.5"/><use href="#fl" y="99"/><use href="#fl" y="115.5"/><use href="#fl" y="132"/><use href="#fl" y="148.5"/><use href="#fl" y="165"/><use href="#fl" y="181.5"/><use href="#fl" y="198"/>
+<rect x="396" y="62" width="8" height="238" fill="#c8a978"/>
+<rect x="370" y="270" width="60" height="30" fill="#3b5d55"/></g>
+<rect x="0" y="296" width="800" height="44" fill="#2f4f48"/>
+<rect x="0" y="300" width="800" height="4" fill="#5b8c80"/>
+<g transform="translate(560 262)"><rect width="150" height="34" rx="10" fill="#1d3b8f"/><g fill="#cfe0ff"><rect x="12" y="8" width="20" height="12" rx="2"/><rect x="40" y="8" width="20" height="12" rx="2"/><rect x="68" y="8" width="20" height="12" rx="2"/><rect x="96" y="8" width="20" height="12" rx="2"/><rect x="124" y="8" width="16" height="12" rx="2"/></g></g>
+<g transform="translate(150 240)"><circle r="16" fill="#1d3b8f"/><text y="5" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#fff" font-weight="700">M</text></g>
+</svg>

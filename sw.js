@@ -1,5 +1,5 @@
-const C='taibao-v2';
-const F=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','icon-180.png'];
+const C='taibao-v3';
+const F=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','icon-180.png','cover.svg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(F)));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))));self.clients.claim()});
 // 網路優先，離線時用快取
