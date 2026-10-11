@@ -446,7 +446,7 @@ $('list').onclick=e=>{
  if(a==='tog')t.done=e.target.checked;
  if(a==='ed')editing=t.id;
  if(a==='cx')editing=null;
- if(a==='ics'){dlICS([t],t.t);return}
+ if(a==='ics'){dlICS([tagTask(t,'對保',PH)],t.t);return}
  if(a==='del'&&confirm('刪除「'+t.t+'」？'))S.tasks=S.tasks.filter(x=>x!==t);
  if(a==='sv'){const g=f=>row.querySelector(`[data-f=${f}]`).value;t.t=g('t')||t.t;t.p=+g('p');t.d=g('d');t.r=+g('r');t.n=g('n');editing=null}
  save();render()};
@@ -641,13 +641,14 @@ function renderReno(){
   if(!col){if(!v.length)h+='<div class="sub">（沒有符合的項目）</div>';
    v.forEach(t=>{h+=`<div class="task ${t.done?'done':''}" data-rid="${t.id}"><input type="checkbox" ${t.done?'checked':''} data-ra="tog">
 <div><div class="t">${esc(t.t)}</div><div class="meta">${t.r===1?'<span class="tag p1">重要</span>':''}${t.d?`<span>📅 ${t.d}</span>`:''}</div></div>
-<div class="acts"><button data-ra="del" title="刪除">🗑</button></div></div>`});}
+<div class="acts">${t.d&&!t.done?'<button data-ra="ics" title="加入行事曆">📅</button>':''}<button data-ra="del" title="刪除">🗑</button></div></div>`});}
   h+='</div>'});
  rList.innerHTML=h;
 }
 rList.onclick=e=>{const c=e.target.closest('[data-rc]');if(c){S.collapsed['r'+c.dataset.rc]=!S.collapsed['r'+c.dataset.rc];save();renderReno();return}
  const a=e.target.dataset.ra;if(!a)return;const row=e.target.closest('[data-rid]'),t=S.rTasks.find(x=>x.id===row.dataset.rid);
  if(a==='tog')t.done=e.target.checked;
+ if(a==='ics'){dlICS([tagTask(t,'裝修',RP)],t.t);return}
  if(a==='del'&&confirm('刪除「'+t.t+'」？'))S.rTasks=S.rTasks.filter(x=>x!==t);
  save();renderReno()};
 rAddF.onsubmit=e=>{e.preventDefault();S.rTasks.push({id:uid(),t:rAT.value,p:+rAP.value,d:rAD.value,r:+rAR.value,done:false});rAT.value='';rAD.value='';save();renderReno()};
@@ -757,16 +758,17 @@ showHero();cdT();renderTimeline();
 // ===== 到期提醒 =====
 const NK='presale-loan-notified';
 const dueList=()=>{const now=today(),lim=new Date(+now+(+(S.nDays||3))*864e5);
- return S.tasks.filter(t=>!t.done&&t.d&&new Date(t.d)<=lim).map(t=>({t,n:Math.round((new Date(t.d)-now)/864e5)})).sort((a,b)=>a.n-b.n)};
+ const all=[...S.tasks.map(t=>({t,tag:'對保'})),...S.rTasks.map(t=>({t,tag:'裝修'}))];
+ return all.filter(x=>!x.t.done&&x.t.d&&new Date(x.t.d)<=lim).map(x=>({...x,n:Math.round((new Date(x.t.d)-now)/864e5)})).sort((a,b)=>a.n-b.n)};
 const lbl=n=>n<0?`逾期 ${-n} 天`:n===0?'今天到期':`${n} 天後到期`;
-function dueBanner(){const L=dueList();dueBox.innerHTML=L.length?`<div class="alert">🔔 <b>${L.length} 項</b>需要注意<ul>${L.slice(0,6).map(x=>`<li>${esc(x.t.t)}　<small class="${x.n<0?'late':''}">${lbl(x.n)}</small></li>`).join('')}</ul></div>`:''}
+function dueBanner(){const L=dueList();dueBox.innerHTML=L.length?`<div class="alert">🔔 <b>${L.length} 項</b>需要注意<ul>${L.slice(0,6).map(x=>`<li>【${x.tag}】${esc(x.t.t)}　<small class="${x.n<0?'late':''}">${lbl(x.n)}</small></li>`).join('')}</ul></div>`:''}
 async function notifyDue(){
  if(!('Notification' in window)||Notification.permission!=='granted')return;
  const day=new Date().toDateString();let sent={};try{sent=JSON.parse(localStorage.getItem(NK))||{}}catch(e){}
  const L=dueList().filter(x=>sent[x.t.id]!==day);if(!L.length)return;
  const reg=await navigator.serviceWorker?.getRegistration();
- const title=L.length===1?L[0].t.t:`有 ${L.length} 項待辦快到期`;
- const body=L.slice(0,4).map(x=>`${lbl(x.n)}｜${x.t.t}`).join('\n');
+ const title=L.length===1?`【${L[0].tag}】${L[0].t.t}`:`有 ${L.length} 項待辦快到期`;
+ const body=L.slice(0,4).map(x=>`${lbl(x.n)}｜【${x.tag}】${x.t.t}`).join('\n');
  const opt={body,icon:'icon-192.png',badge:'icon-192.png',tag:'due'};
  reg?reg.showNotification(title,opt):new Notification(title,opt);
  L.forEach(x=>sent[x.t.id]=day);try{localStorage.setItem(NK,JSON.stringify(sent))}catch(e){}}
@@ -779,11 +781,14 @@ nDays.value=S.nDays||'3';nDays.onchange=()=>{S.nDays=nDays.value;save();dueBanne
 function dlICS(ts,name){const pad=n=>String(n).padStart(2,'0');const stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
  const ev=ts.map(t=>{const d=t.d.replace(/-/g,''),nx=new Date(t.d);nx.setDate(nx.getDate()+1);const d2=`${nx.getFullYear()}${pad(nx.getMonth()+1)}${pad(nx.getDate())}`;
  const tx=x=>String(x).replace(/[\\,;]/g,m=>'\\'+m).replace(/\n/g,'\\n');
- return ['BEGIN:VEVENT',`UID:${t.id}@presale-loan`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d2}`,`SUMMARY:【對保】${tx(t.t)}`,`DESCRIPTION:${tx(PH[t.p]+(t.n?'\n'+t.n:''))}`,
+ const tag=t._tag||'對保',phase=t._phase||'';
+ return ['BEGIN:VEVENT',`UID:${t.id}@presale-loan`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d2}`,`SUMMARY:【${tag}】${tx(t.t)}`,`DESCRIPTION:${tx(phase+(t.n?'\n'+t.n:''))}`,
  'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:明天到期','TRIGGER:-PT15H','END:VALARM','BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:今天到期','TRIGGER:PT9H','END:VALARM','END:VEVENT'].join('\r\n')});
  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//presale-loan//TW','CALSCALE:GREGORIAN',...ev,'END:VCALENDAR'].join('\r\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download=(name||'對保待辦').slice(0,30)+'.ics';a.click()}
-icsAll.onclick=()=>{const L=S.tasks.filter(t=>!t.done&&t.d);if(!L.length)return alert('還沒有設到期日的未完成待辦');dlICS(L,'對保待辦')};
+const tagTask=(t,tag,phaseArr)=>({...t,_tag:tag,_phase:phaseArr[t.p]||''});
+icsAll.onclick=()=>{const L=[...S.tasks.filter(t=>!t.done&&t.d).map(t=>tagTask(t,'對保',PH)),...S.rTasks.filter(t=>!t.done&&t.d).map(t=>tagTask(t,'裝修',RP))];
+ if(!L.length)return alert('還沒有設到期日的未完成待辦');dlICS(L,'對保與裝修待辦')};
 // ===== 首頁三大流程總覽 =====
 function renderOverview(){
  const mk=(label,tab,done,total,hint)=>{const pct=total?Math.round(done/total*100):0;
