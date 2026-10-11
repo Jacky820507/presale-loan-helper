@@ -334,8 +334,8 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <div class="warnbox">限制：網頁 App 沒有伺服器，<b>App 沒打開時無法主動推播</b>。要「不開 App 也會準時響」，請用下面的行事曆提醒。<br>iPhone 需 iOS 16.4 以上，且必須先「加入主畫面」再從主畫面開啟，才能開通知。</div>
 </div>
 <div class="card"><h2>📅 加入手機行事曆（最可靠）</h2>
-<p>把有設到期日的待辦匯出成 .ics，用手機行事曆開啟匯入。每項會在到期日前一天早上 9:00 與當天早上 9:00 響鈴提醒，App 關著也有效。</p>
-<div class="row"><button class="b" id="icsAll">匯出全部未完成待辦</button></div>
+<p>把對保與裝修兩邊有設到期日的待辦一起匯出成 .ics，用手機行事曆開啟匯入。每項會在到期日前一天早上 9:00 與當天早上 9:00 響鈴提醒，App 關著也有效。</p>
+<div class="row"><button class="b" id="icsAll">匯出全部未完成待辦（對保＋裝修）</button></div>
 <p class="sub">單一項目也可以在待辦清單點 📅 個別加入。改了日期需要重新匯出。</p>
 </div>
 </section>
@@ -343,7 +343,7 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <!-- DATA -->
 <section class="tab" id="data">
 <div class="card"><h2>備份與還原</h2>
-<p class="sub">資料只存在這個瀏覽器。換電腦或清快取前，先匯出 JSON 備份。</p>
+<p class="sub">資料只存在這個瀏覽器。換電腦或清快取前，先匯出 JSON 備份（包含驗屋照片與封面照片）。照片多的話檔案會比較大。</p>
 <div class="row"><button class="b" id="exp">匯出 JSON</button>
 <label class="g" style="border:1px solid var(--line);padding:6px 10px;border-radius:8px;cursor:pointer">匯入 JSON<input type="file" id="imp" accept=".json" hidden></label>
 <button class="g" id="rst" style="color:var(--hi)">重設為預設清單</button></div>
@@ -731,9 +731,15 @@ rAGo.onclick=()=>renderRenoAnalysis(analyzeReno(rATxt.value));
 rAClr.onclick=()=>{if(confirm('清空貼上的內容？')){rATxt.value='';S.rATxt='';save();rAOut.innerHTML=''}};
 
 // data
-$('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='對保助手備份.json';a.click()};
-$('imp').onchange=e=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.tasks)throw 0;S=d;save();location.reload()}catch(x){alert('檔案格式不正確')}};r.readAsText(e.target.files[0])};
-$('rst').onclick=()=>{if(confirm('會清除所有勾選、待辦、銀行比價、驗屋紀錄、裝修預算、分包比價、網友報價分析與重要日期，確定？')){S=fresh();try{Object.keys(localStorage).filter(k=>k.startsWith(PK)).forEach(k=>localStorage.removeItem(k))}catch(e){}save();location.reload()}};
+$('exp').onclick=()=>{const photos={};try{Object.keys(localStorage).filter(k=>k.startsWith(PK)).forEach(k=>photos[k]=localStorage.getItem(k))}catch(e){}
+ const heroPhoto=(()=>{try{return localStorage.getItem(HK)}catch(e){return null}})();
+ const bundle={...S,_photos:photos,_hero:heroPhoto};
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(bundle)],{type:'application/json'}));a.download='對保助手備份.json';a.click()};
+$('imp').onchange=e=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.tasks)throw 0;
+ const photos=d._photos||{},hero=d._hero;delete d._photos;delete d._hero;
+ try{Object.entries(photos).forEach(([k,v])=>localStorage.setItem(k,v));if(hero)localStorage.setItem(HK,hero)}catch(err){alert('照片太多，手機儲存空間不夠，已還原其他資料但部分照片可能遺失')}
+ S=d;save();location.reload()}catch(x){alert('檔案格式不正確')}};r.readAsText(e.target.files[0])};
+$('rst').onclick=()=>{if(confirm('會清除所有勾選、待辦、銀行比價、驗屋紀錄與照片、裝修預算、分包比價、網友報價分析、重要日期與封面照片，確定？')){S=fresh();try{Object.keys(localStorage).filter(k=>k.startsWith(PK)).forEach(k=>localStorage.removeItem(k));localStorage.removeItem(HK)}catch(e){}save();location.reload()}};
 
 render();calc();
 // 封面照片：壓縮後存在本機
