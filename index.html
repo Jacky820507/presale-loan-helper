@@ -704,11 +704,11 @@ function analyzeReno(txt){
  segs.forEach(s=>{
   const cm=[];CAT_RE.lastIndex=0;let cmh;while(cmh=CAT_RE.exec(s))cm.push({i:cmh.index,c:cmh[0]});cm.sort((a,b)=>a.i-b.i);
   const date=(s.match(/(20\d\d)[\/.\-年](\d{1,2})(?:[\/.\-月](\d{1,2}))?/)||[])[0]||'';
-  const pr=/(\d[\d,]{2,})\s*(萬|元)(\s*[\/每]\s*(坪|尺|才|式|米|公尺))?/g;let m;
-  while(m=pr.exec(s)){let v=+m[1].replace(/,/g,'');if(m[2]==='萬')v*=10000;if(v<50||v>5000000)continue;
+  const pr=/(\d+(?:\.\d+)?)(萬)|(\d[\d,]{2,})\s*(元)(\s*[\/每]\s*(坪|尺|才|式|米|公尺))?/g;let m;
+  while(m=pr.exec(s)){let v,unit;if(m[2]==='萬'){v=+m[1]*10000;unit=''}else{v=+m[3].replace(/,/g,'');unit=m[5]||''}if(v<50||v>5000000)continue;
    const prev=cm.filter(c=>c.i<=m.index).pop()||cm.find(c=>c.i>m.index&&c.i-m.index<15);
    const ctx=s.slice(Math.max(0,m.index-20),m.index+20).replace(/\s+/g,' ');
-   hits.push({cat:prev?prev.c:'未分類',v,unit:m[4]||'',date,ctx})}
+   hits.push({cat:prev?prev.c:'未分類',v,unit,date,ctx})}
  });
  return{segs:segs.length,hits}}
 function renderRenoAnalysis(r){
