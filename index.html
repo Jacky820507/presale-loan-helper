@@ -96,6 +96,7 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <button data-t="calc">🧮 試算</button>
 <button data-t="bank">🏦 銀行比價</button>
 <button data-t="insp">🔍 驗屋</button>
+<button data-t="reno">🛠 裝修</button>
 <button data-t="guide">📘 首購須知</button>
 <button data-t="notify">🔔 提醒</button>
 <button data-t="data">💾 備份</button>
@@ -229,6 +230,36 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <div id="iList"></div>
 <div class="card"><h2>新增自訂項目</h2>
 <form class="row" id="iAdd"><select id="iAddA"></select><input id="iAddT" placeholder="檢查項目…" required style="flex:1;min-width:140px"><button class="b">新增</button></form></div>
+</section>
+
+<!-- RENO -->
+<section class="tab" id="reno">
+<div class="stats">
+<div class="stat">待辦進度<b id="rPct">0%</b><div class="bar"><i id="rBar"></i></div></div>
+<div class="stat">預算<b id="rBud">0</b></div>
+<div class="stat">已花費<b id="rSpent">0</b></div>
+<div class="stat w">超支<b id="rOver">0</b></div>
+</div>
+<div class="card"><h2>裝修流程待辦</h2>
+<div class="row filters"><select id="rF"><option value="all">全部</option><option value="open">只看未完成</option></select>
+<select id="rP"><option value="all">所有階段</option></select></div>
+<div id="rList"></div>
+<form class="addform" id="rAddF"><input id="rAT" placeholder="要做的事…" required><select id="rAP"></select><input id="rAD" type="date"><select id="rAR"><option value="2">一般</option><option value="1">重要</option></select><button class="b">新增</button></form>
+</div>
+<div class="card"><h2>💰 預算表</h2>
+<p class="sub">填各項目的預算與實際花費，超支會標紅。</p>
+<div class="tw"><table id="rT"><thead><tr><th>項目</th><th>類別</th><th>廠商</th><th>預算</th><th>實付</th><th>差額</th><th>備註</th><th></th></tr></thead><tbody></tbody></table></div>
+<div class="row" style="margin-top:10px"><button class="g" id="rBAdd">＋ 新增項目</button><button class="b" id="rCsv">⬇ 匯出 CSV</button></div>
+</div>
+<div class="card"><h2>📐 收納與材質備忘（建築師視角）</h2>
+<ul style="margin:0;padding-left:1.2em">
+<li>拆除前拍好全室現況照與水電管線位置，避免事後打到管線</li>
+<li>水電配置圖留底，插座迴路對應配電箱標示要一致</li>
+<li>木作櫃體預留線路孔、通風孔，避免事後補打</li>
+<li>浴室、廚房止水墩高度與排水坡度，泥作前先確認</li>
+<li>油漆前確認色號與面材（平光/半光），留樣本備查</li>
+<li>工班進場順序：拆除→水電→泥作→木作→油漆→清潔→軟裝，避免後面工種破壞前面成果</li>
+</ul></div>
 </section>
 
 <!-- GUIDE -->
@@ -533,6 +564,80 @@ iCsv.onclick=()=>{const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
  const L=[['區域','項目','狀態','位置與說明','照片'].map(q).join(','),...S.insp.filter(x=>x.s).map(x=>[x.a,x.t,IS[x.s].replace(/^\S+ /,''),x.n,x.ph?'有':''].map(q).join(','))];
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+L.join('\r\n')],{type:'text/csv'}));a.download=`驗屋紀錄_${dstr()}.csv`;a.click()};
 renderInsp();
+
+// ===== 裝修流程 =====
+const RP=['1. 設計規劃','2. 拆除與保護','3. 水電','4. 泥作','5. 木作','6. 油漆','7. 清潔與驗收','8. 軟裝進場'];
+const RDEF=[
+T(0,'丈量現場，確認平面配置與動線',1),
+T(0,'與設計師/工班討論風格、預算區間',1),
+T(0,'確認水電管線配置圖（插座、迴路、弱電點位）',1),
+T(0,'簽裝修合約，確認付款階段與保固條款',1),
+T(0,'申請裝修許可（管委會/大樓規約）'),
+T(1,'拆除前拍照存證全室現況與管線位置',1),
+T(1,'公共區域、電梯做好保護措施（規約常強制要求）'),
+T(1,'拆除廢棄物清運申報'),
+T(2,'插座迴路與配電箱標示一致，留線路圖',1),
+T(2,'弱電（網路、電視、對講機）點位確認'),
+T(2,'漏電斷路器、接地測試'),
+T(2,'空調管線、排水預留位置'),
+T(3,'防水施工（浴室、陽台），完成後做蓄水測試',1),
+T(3,'止水墩高度、洩水坡度確認'),
+T(3,'磁磚配置圖與放樣確認，開工前核對花色數量'),
+T(4,'櫃體線路孔、通風孔預留'),
+T(4,'木作進場前確認尺寸與圖面一致',1),
+T(4,'封板前拍照存證內部結構'),
+T(5,'色號、面材樣本確認並留樣'),
+T(5,'批土打磨完成度檢查'),
+T(6,'全室清潔（細清），家具進場前完成'),
+T(6,'逐項驗收：水電測試、門窗開關、五金',1),
+T(6,'拍照記錄完工狀態，列入保固憑證'),
+T(7,'家具、家電進場與定位'),
+T(7,'窗簾、燈具安裝'),
+T(7,'最終複驗，結清尾款',1),
+];
+if(!S.rTasks){S.rTasks=RDEF.map(x=>({...x,id:uid(),d:'',done:false}));save()}
+RP.forEach((p,i)=>{rAP.add(new Option(p,i));rP.add(new Option(p,i))});
+function renderReno(){
+ const fs=rF.value,fp=rP.value,ts=S.rTasks,done=ts.filter(t=>t.done).length;
+ const pct=ts.length?Math.round(done/ts.length*100):0;rPct.textContent=pct+'%';rBar.style.width=pct+'%';
+ let h='';
+ RP.forEach((p,pi)=>{if(fp!=='all'&&+fp!==pi)return;const all=ts.filter(t=>t.p===pi);
+  let v=all.filter(t=>fs==='all'||!t.done);v.sort((a,b)=>(a.done-b.done)||(a.d||'9').localeCompare(b.d||'9'));
+  const dn=all.filter(t=>t.done).length,col=S.collapsed['r'+pi];
+  h+=`<div class="card phase"><h3 data-rc="${pi}">${p} <small>${dn}/${all.length} ${col?'▸':'▾'}</small></h3>`;
+  if(!col){if(!v.length)h+='<div class="sub">（沒有符合的項目）</div>';
+   v.forEach(t=>{h+=`<div class="task ${t.done?'done':''}" data-rid="${t.id}"><input type="checkbox" ${t.done?'checked':''} data-ra="tog">
+<div><div class="t">${esc(t.t)}</div><div class="meta">${t.r===1?'<span class="tag p1">重要</span>':''}${t.d?`<span>📅 ${t.d}</span>`:''}</div></div>
+<div class="acts"><button data-ra="del" title="刪除">🗑</button></div></div>`});}
+  h+='</div>'});
+ rList.innerHTML=h;
+}
+rList.onclick=e=>{const c=e.target.closest('[data-rc]');if(c){S.collapsed['r'+c.dataset.rc]=!S.collapsed['r'+c.dataset.rc];save();renderReno();return}
+ const a=e.target.dataset.ra;if(!a)return;const row=e.target.closest('[data-rid]'),t=S.rTasks.find(x=>x.id===row.dataset.rid);
+ if(a==='tog')t.done=e.target.checked;
+ if(a==='del'&&confirm('刪除「'+t.t+'」？'))S.rTasks=S.rTasks.filter(x=>x!==t);
+ save();renderReno()};
+rAddF.onsubmit=e=>{e.preventDefault();S.rTasks.push({id:uid(),t:rAT.value,p:+rAP.value,d:rAD.value,r:+rAR.value,done:false});rAT.value='';rAD.value='';save();renderReno()};
+['rF','rP'].forEach(i=>document.getElementById(i).onchange=renderReno);
+// 預算表
+if(!S.rBudget)S.rBudget=[{item:'拆除工程',cat:'拆除',vendor:'',bud:'',act:'',note:''},{item:'水電工程',cat:'水電',vendor:'',bud:'',act:'',note:''},{item:'泥作防水',cat:'泥作',vendor:'',bud:'',act:'',note:''},{item:'木作櫃體',cat:'木作',vendor:'',bud:'',act:'',note:''},{item:'油漆',cat:'油漆',vendor:'',bud:'',act:'',note:''},{item:'家具家電',cat:'軟裝',vendor:'',bud:'',act:'',note:''}];
+const RBF=['item','cat','vendor','bud','act','note'];
+function renderBudget(){const tb=rT.tBodies[0];
+ if(document.activeElement&&tb.contains(document.activeElement)){
+  let bud=0,spent=0,over=0;S.rBudget.forEach((r,i)=>{const b=+r.bud||0,a=+r.act||0;bud+=b;spent+=a;if(a>b&&b)over+=a-b;tb.rows[i].cells[5].textContent=(a-b)?(a-b>0?'+':'')+f(a-b):'';tb.rows[i].className=a>b&&b?'late':''});
+  rBud.textContent=f(bud);rSpent.textContent=f(spent);rOver.textContent=f(over);return}
+ tb.innerHTML=S.rBudget.map((r,i)=>`<tr>${RBF.map(k=>`<td><input data-ri="${i}" data-rk="${k}" value="${esc(r[k])}" style="min-width:${k==='item'||k==='note'?'100':k==='vendor'?'80':'60'}px" ${k==='bud'||k==='act'?'type=number':''}></td>`).join('')}<td></td><td><button class="g" data-rdel="${i}">✕</button></td></tr>`).join('');
+ let bud=0,spent=0,over=0;S.rBudget.forEach(r=>{const b=+r.bud||0,a=+r.act||0;bud+=b;spent+=a;if(a>b&&b)over+=a-b});
+ rBud.textContent=f(bud);rSpent.textContent=f(spent);rOver.textContent=f(over);
+ [...tb.rows].forEach((tr,i)=>{const r=S.rBudget[i],a=+r.act||0,b=+r.bud||0;tr.cells[5].textContent=(a-b&&b)?(a-b>0?'+':'')+f(a-b):'';tr.className=a>b&&b?'late':''});
+}
+rT.oninput=e=>{const d=e.target.dataset;if(d.rk){S.rBudget[d.ri][d.rk]=e.target.value;save();renderBudget()}};
+rT.onclick=e=>{const i=e.target.dataset.rdel;if(i!=null&&confirm('刪除這個項目？')){S.rBudget.splice(i,1);save();renderBudget()}};
+rBAdd.onclick=()=>{S.rBudget.push({item:'',cat:'',vendor:'',bud:'',act:'',note:''});save();renderBudget()};
+rCsv.onclick=()=>{const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+ const L=[['項目','類別','廠商','預算','實付','差額','備註'].map(q).join(','),...S.rBudget.map(r=>[r.item,r.cat,r.vendor,r.bud,r.act,(+r.act||0)-(+r.bud||0),r.note].map(q).join(','))];
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+L.join('\r\n')],{type:'text/csv'}));a.download=`裝修預算_${dstr()}.csv`;a.click()};
+renderReno();renderBudget();
 
 // data
 $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='對保助手備份.json';a.click()};
