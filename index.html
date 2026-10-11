@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>預售屋對保助手</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2f6f5e">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="對保助手">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{--bg:#f5f4ef;--card:#fff;--fg:#1d1d1b;--mut:#6d6c66;--acc:#2f6f5e;--acc2:#e3efe9;--warn:#b5562a;--warn2:#f8e7dd;--line:#e2e0d8;--hi:#c23b3b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151514;--card:#20201e;--fg:#ecebe6;--mut:#a3a29c;--acc:#6fbfa6;--acc2:#21342e;--warn:#e89366;--warn2:#3a2a20;--line:#34342f;--hi:#e86b6b}}
+:root[data-theme="dark"]{--bg:#151514;--card:#20201e;--fg:#ecebe6;--mut:#a3a29c;--acc:#6fbfa6;--acc2:#21342e;--warn:#e89366;--warn2:#3a2a20;--line:#34342f;--hi:#e86b6b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,"Noto Sans TC","Microsoft JhengHei",sans-serif}
+header{position:sticky;top:0;padding-top:env(safe-area-inset-top);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.hd{max-width:960px;margin:0 auto;padding:14px 16px 0}
+h1{font-size:1.3rem;margin:0}
+.sub{color:var(--mut);font-size:.85rem}
+nav{display:flex;gap:4px;overflow-x:auto;margin-top:10px}
+nav button{border:0;background:none;color:var(--mut);padding:8px 12px;font:inherit;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+nav button.on{color:var(--acc);border-color:var(--acc);font-weight:600}
+main{max-width:960px;margin:0 auto;padding:16px 16px calc(80px + env(safe-area-inset-bottom))}
+input,select,textarea{font-size:16px!important}
+.acts button{padding:6px 8px}
+.task input[type=checkbox]{width:22px;height:22px}
+#inst{display:none;margin-top:8px}
+.tab{display:none}.tab.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+h2{font-size:1.05rem;margin:0 0 10px;color:var(--acc)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat b{display:block;font-size:1.5rem;color:var(--acc)}
+.stat.w b{color:var(--hi)}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--acc)}
+input,select,textarea{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;min-width:0}
+button.b{border:1px solid var(--acc);background:var(--acc);color:var(--card);padding:7px 14px;border-radius:8px;font:inherit;cursor:pointer}
+button.g{border:1px solid var(--line);background:none;color:var(--fg);padding:6px 10px;border-radius:8px;font:inherit;cursor:pointer}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filters{margin-bottom:12px}
+.phase{margin-bottom:16px}
+.phase h3{font-size:.95rem;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.phase h3 small{color:var(--mut);font-weight:400}
+.task{display:grid;grid-template-columns:24px 1fr auto;gap:8px;padding:9px 6px;border-bottom:1px solid var(--line);align-items:start}
+.task:last-child{border:0}
+.task input[type=checkbox]{margin-top:4px;width:18px;height:18px;accent-color:var(--acc)}
+.task.done .t{text-decoration:line-through;color:var(--mut)}
+.t{font-weight:500}
+.meta{font-size:.8rem;color:var(--mut);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.tag{padding:0 7px;border-radius:10px;background:var(--acc2);color:var(--acc);font-size:.75rem}
+.tag.p1{background:var(--warn2);color:var(--hi)}
+.late{color:var(--hi);font-weight:600}
+.note{font-size:.85rem;color:var(--mut);margin-top:4px;white-space:pre-wrap}
+.acts{display:flex;gap:2px}.acts button{border:0;background:none;color:var(--mut);cursor:pointer;font-size:.9rem;padding:2px 5px}
+.acts button:hover{color:var(--fg)}
+.edit{grid-column:2/4;display:grid;gap:6px;margin-top:6px}
+.addform{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px}
+@media(max-width:640px){.addform{grid-template-columns:1fr 1fr}.addform input:first-child{grid-column:1/3}}
+.warnbox{background:var(--warn2);border-left:4px solid var(--warn);padding:10px 12px;border-radius:8px;font-size:.9rem;margin:10px 0}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{border-bottom:1px solid var(--line);padding:6px;text-align:left;vertical-align:top}
+th{color:var(--mut);font-weight:500;white-space:nowrap}
+td input{width:100%}
+.tw{overflow-x:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.grid label{font-size:.85rem;color:var(--mut)}.grid input{width:100%;margin-top:3px}
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:14px}
+.out div{background:var(--acc2);border-radius:10px;padding:10px}.out b{display:block;font-size:1.25rem;color:var(--acc)}
+dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut)}
+.best{background:var(--acc2)}
+</style>
+</head>
+<body>
+<header><div class="hd">
+<h1>預售屋對保助手</h1>
+<button class="b" id="inst">📲 安裝到主畫面</button>
+<div class="sub">新北市土城區｜一般首購房貸（不使用新青安）｜貸款約 1,000 萬｜資料只存在這台瀏覽器</div>
+<nav id="nav">
+<button data-t="todo" class="on">✅ 待辦清單</button>
+<button data-t="calc">🧮 試算</button>
+<button data-t="bank">🏦 銀行比價</button>
+<button data-t="guide">📘 首購須知</button>
+<button data-t="data">💾 備份</button>
+</nav></div></header>
+
+<main>
+<!-- TODO -->
+<section class="tab on" id="todo">
+<div class="stats">
+<div class="stat">整體進度<b id="sPct">0%</b><div class="bar"><i id="sBar"></i></div></div>
+<div class="stat">未完成<b id="sOpen">0</b></div>
+<div class="stat w">已逾期<b id="sLate">0</b></div>
+<div class="stat">7 天內到期<b id="sSoon">0</b></div>
+</div>
+<div class="card">
+<h2>新增待辦</h2>
+<form class="addform" id="addF">
+<input id="aT" placeholder="要做的事…" required>
+<select id="aP"></select>
+<input id="aD" type="date">
+<select id="aR"><option value="2">一般</option><option value="1">重要</option></select>
+<button class="b">新增</button>
+</form>
+</div>
+<div class="row filters">
+<select id="fS"><option value="all">全部</option><option value="open">只看未完成</option><option value="done">只看已完成</option></select>
+<select id="fP"><option value="all">所有階段</option></select>
+<label class="row" style="gap:4px"><input type="checkbox" id="fI">只看重要</label>
+<input id="fQ" placeholder="搜尋…" style="flex:1;min-width:120px">
+</div>
+<div id="list"></div>
+</section>
+
+<!-- CALC -->
+<section class="tab" id="calc">
+<div class="card"><h2>月付試算（本息平均攤還）</h2>
+<div class="grid">
+<label>總價（萬）<input id="cPrice" type="number" value="1400"></label>
+<label>貸款金額（萬）<input id="cAmt" type="number" value="1000"></label>
+<label>年利率（%）<input id="cRate" type="number" step="0.01" value="2.2"></label>
+<label>年限（年）<input id="cYrs" type="number" value="30"></label>
+<label>寬限期（年）<input id="cGrace" type="number" value="0"></label>
+<label>家庭月收入（元）<input id="cInc" type="number" value="120000"></label>
+</div>
+<div class="out" id="cOut"></div>
+<p class="sub">首購常見利率約 2.1%–2.6%（依銀行、個人條件與央行利率變動），請用各家報價實際代入。</p>
+</div>
+<div class="card"><h2>交屋前現金需求估算</h2>
+<div class="grid">
+<label>已繳工程款（萬）<input id="xPaid" type="number" value="200"></label>
+<label>契稅/印花/規費（萬）<input id="xTax" type="number" value="8"></label>
+<label>代書費（萬）<input id="xAg" type="number" value="2"></label>
+<label>銀行開辦/鑑價費（萬）<input id="xBank" type="number" value="1"></label>
+<label>火險地震險（萬）<input id="xIns" type="number" value="0.3"></label>
+<label>管理費預繳/雜支（萬）<input id="xMisc" type="number" value="3"></label>
+</div>
+<div class="out" id="xOut"></div>
+</div>
+</section>
+
+<!-- BANK -->
+<section class="tab" id="bank">
+<div class="card"><h2>銀行比價表</h2>
+<p class="sub">每家銀行問一樣的問題，填完會自動標出月付最低的一家。</p>
+<div class="tw"><table id="bT"><thead><tr>
+<th>銀行</th><th>利率%</th><th>指數＋加碼</th><th>年限</th><th>寬限</th><th>成數</th><th>綁約/違約金</th><th>開辦+帳管費</th><th>要求條件</th><th>月付</th><th></th></tr></thead><tbody></tbody></table></div>
+<div class="row" style="margin-top:10px"><button class="g" id="bAdd">＋ 新增銀行</button></div>
+</div>
+<div class="card"><h2>打給銀行時要問的問題</h2>
+<ol>
+<li>首購可核幾成？鑑價大概多少？（預售屋鑑價常低於成交價）</li>
+<li>利率是一段式還是分段式？基準指數是什麼（郵儲/定儲指數）＋加碼多少？</li>
+<li>最長年限、能否有寬限期（首購第一戶可以申請）？</li>
+<li>綁約幾年？提前清償違約金幾 %？部分還款可以嗎？</li>
+<li>開辦費、帳管費、鑑價費、設定費合計多少？可否減免？</li>
+<li>優惠利率有沒有綁薪轉、信用卡、房貸壽險、理財？</li>
+<li>核貸需要多久？何時對保？撥款時程能否配合建商交屋日？</li>
+</ol></div>
+</section>
+
+<!-- GUIDE -->
+<section class="tab" id="guide">
+<div class="card"><h2>一般首購房貸 vs 新青安</h2>
+<p>你選擇<b>一般銀行首購方案</b>。優點是不受新青安「一人一戶、條件審查」與政策期限影響，條件可直接跟銀行議價；代價是利率通常比新青安補貼後高約 0.3–0.6%，年限多為 30 年（少數 40 年）。</p>
+<div class="warnbox">利率、成數、央行信用管制每年都可能調整，本頁數字僅為整理參考，請以銀行書面報價為準。這不是財務建議。</div>
+</div>
+<div class="card"><h2>首購資格（銀行一般認定）</h2>
+<dl>
+<dt>名下無自有住宅</dt><dd>本人（多數銀行連配偶、未成年子女一併看）名下無房，用國稅局「財產歸屬資料清單」證明。</dd>
+<dt>央行信用管制</dt><dd>第一戶自住通常不受限，可有寬限期；若名下已有房，第二戶成數、寬限期會被限縮——先確認自己的戶數認定。</dd>
+<dt>成數</dt><dd>首購一般可到 7–8 成，但以「鑑價」與「成交價」較低者計算。</dd>
+<dt>還款能力</dt><dd>銀行通常希望月付 ≤ 月收入約 1/3（負債比），收入證明不足時可加共同借款人或保證人。</dd>
+</dl></div>
+<div class="card"><h2>對保當天流程</h2>
+<ol>
+<li>核對身分、簽借款契約、約定書、抵押權設定文件</li>
+<li>逐條確認利率、年限、寬限期、綁約、費用與核貸通知一致</li>
+<li>指定撥款帳戶（建商履約保證帳戶）與扣款帳戶</li>
+<li>確認火險/地震險、房貸壽險是否為自願</li>
+<li>索取契約副本與還款試算表</li>
+</ol></div>
+<div class="card"><h2>稅務與後續</h2>
+<dl>
+<dt>房屋稅、地價稅</dt><dd>交屋設籍後，向新北市稅捐稽徵處申請自用住宅稅率（地價稅有申請期限，記得在 9/22 前）。</dd>
+<dt>房貸利息扣除</dt><dd>自住房貸利息每年最高 30 萬可列舉扣除，需減除儲蓄投資特別扣除額；保留銀行繳息證明。</dd>
+<dt>保固</dt><dd>結構保固 15 年、固定建材設備 1 年起算日看契約，交屋日記下來。</dd>
+</dl></div>
+</section>
+
+<!-- DATA -->
+<section class="tab" id="data">
+<div class="card"><h2>備份與還原</h2>
+<p class="sub">資料只存在這個瀏覽器。換電腦或清快取前，先匯出 JSON 備份。</p>
+<div class="row"><button class="b" id="exp">匯出 JSON</button>
+<label class="g" style="border:1px solid var(--line);padding:6px 10px;border-radius:8px;cursor:pointer">匯入 JSON<input type="file" id="imp" accept=".json" hidden></label>
+<button class="g" id="rst" style="color:var(--hi)">重設為預設清單</button></div>
+</div>
+</section>
+</main>
+
+<script>
+const K='presale-loan-v2';
+const PH=['1. 對保前準備','2. 銀行比價與申貸','3. 驗屋','4. 對保','5. 撥款與交屋','6. 交屋後'];
+const T=(p,t,r=2,n='')=>({p,t,r,n});
+const DEF=[
+T(0,'確認建商交屋時程（使照、產權登記、通知對保日）',1),
+T(0,'向國稅局申請「財產歸屬資料清單」證明名下無自有住宅',1,'可用自然人憑證線上申請，或臨櫃'),
+T(0,'準備收入證明：扣繳憑單、薪轉存摺近6個月',1),
+T(0,'申請在職證明'),
+T(0,'申請戶籍謄本'),
+T(0,'整理買賣契約、客變附約、已繳款收據'),
+T(0,'檢查聯徵：撥款前不辦新信貸、不換工作、不增加卡債',1),
+T(0,'估算尾款差額與交屋現金需求（見「試算」頁）'),
+T(1,'列出至少 3 家銀行（含建商配合銀行）',1),
+T(1,'逐家詢價並填入「銀行比價」表'),
+T(1,'確認鑑價結果與核貸成數'),
+T(1,'跟銀行議價：利率、開辦費、綁約條件'),
+T(1,'選定銀行並送件申貸',1),
+T(1,'取得核貸通知書（核對金額、利率、年限）',1),
+T(2,'安排驗屋（自驗或找專業驗屋公司）',1),
+T(2,'記錄瑕疵（拍照、編號、位置）並交建商'),
+T(2,'確認坪數找補（登記面積 vs 契約面積）'),
+T(2,'複驗瑕疵是否修繕完成'),
+T(3,'攜帶：身分證、第二證件、印章、契約、收入證明、存摺',1),
+T(3,'逐條核對利率、指數加碼、寬限期、綁約違約金',1),
+T(3,'確認房貸壽險是否非強制，火險地震險保費'),
+T(3,'確認撥款帳戶與每月扣款帳戶'),
+T(3,'索取契約副本與還款試算表'),
+T(4,'代書辦理過戶與抵押權設定'),
+T(4,'繳納契稅、印花稅、規費、代書費'),
+T(4,'確認銀行撥款日與建商入帳',1),
+T(4,'補足尾款差額'),
+T(4,'交屋點交：鑰匙、磁扣、保固書、使用手冊、公設'),
+T(5,'辦理遷入設籍'),
+T(5,'申請自用住宅房屋稅、地價稅稅率',1,'地價稅需於 9/22 前申請'),
+T(5,'設定房貸自動扣款、記下首期扣款日'),
+T(5,'過戶水電瓦斯、網路'),
+T(5,'所有文件掃描存檔（契約、對保書、驗屋紀錄）'),
+T(5,'每年報稅時列舉房貸利息扣除'),
+];
+const uid=()=>Math.random().toString(36).slice(2,9);
+let S;
+function fresh(){return{tasks:DEF.map(x=>({...x,id:uid(),d:'',done:false})),banks:[{n:'',rate:'',idx:'',y:'30',g:'',ratio:'',lock:'',fee:'',cond:''}],calc:{},collapsed:{}}}
+try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
+if(!S||!S.tasks)S=fresh();
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// nav
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('nav button,.tab').forEach(x=>x.classList.remove('on'));
+ b.classList.add('on');$(b.dataset.t).classList.add('on')});
+
+// todo
+PH.forEach((p,i)=>{$('aP').add(new Option(p,i));$('fP').add(new Option(p,i))});
+const today=()=>new Date(new Date().toDateString());
+let editing=null;
+function render(){
+ const fs=$('fS').value,fp=$('fP').value,fi=$('fI').checked,q=$('fQ').value.trim();
+ const now=today(),wk=new Date(+now+7*864e5);
+ const ts=S.tasks,done=ts.filter(t=>t.done).length;
+ const late=ts.filter(t=>!t.done&&t.d&&new Date(t.d)<now).length;
+ const soon=ts.filter(t=>!t.done&&t.d&&new Date(t.d)>=now&&new Date(t.d)<=wk).length;
+ const pct=ts.length?Math.round(done/ts.length*100):0;
+ $('sPct').textContent=pct+'%';$('sBar').style.width=pct+'%';$('sOpen').textContent=ts.length-done;$('sLate').textContent=late;$('sSoon').textContent=soon;
+ let h='';
+ PH.forEach((p,pi)=>{
+  if(fp!=='all'&&+fp!==pi)return;
+  const all=ts.filter(t=>t.p===pi);
+  let v=all.filter(t=>(fs==='all'||(fs==='open'?!t.done:t.done))&&(!fi||t.r===1)&&(!q||(t.t+t.n).includes(q)));
+  v.sort((a,b)=>(a.done-b.done)||(a.d||'9').localeCompare(b.d||'9'));
+  const dn=all.filter(t=>t.done).length,col=S.collapsed[pi];
+  h+=`<div class="card phase"><h3 data-c="${pi}">${p} <small>${dn}/${all.length} ${col?'▸':'▾'}</small></h3>`;
+  if(!col){
+   if(!v.length)h+='<div class="sub">（沒有符合的項目）</div>';
+   v.forEach(t=>{
+    const isLate=!t.done&&t.d&&new Date(t.d)<now;
+    h+=`<div class="task ${t.done?'done':''}" data-id="${t.id}">
+<input type="checkbox" ${t.done?'checked':''} data-a="tog">
+<div><div class="t">${esc(t.t)}</div><div class="meta">${t.r===1?'<span class="tag p1">重要</span>':''}${t.d?`<span class="${isLate?'late':''}">📅 ${t.d}${isLate?' 已逾期':''}</span>`:''}</div>${t.n?`<div class="note">${esc(t.n)}</div>`:''}</div>
+<div class="acts"><button data-a="ed" title="編輯">✏️</button><button data-a="del" title="刪除">🗑</button></div>
+${editing===t.id?`<div class="edit"><input data-f="t" value="${esc(t.t)}"><div class="row"><select data-f="p">${PH.map((x,i)=>`<option value="${i}" ${i===t.p?'selected':''}>${x}</option>`).join('')}</select><input type="date" data-f="d" value="${t.d}"><select data-f="r"><option value="2">一般</option><option value="1" ${t.r===1?'selected':''}>重要</option></select></div><textarea data-f="n" rows="2" placeholder="備註">${esc(t.n)}</textarea><div class="row"><button class="b" data-a="sv">儲存</button><button class="g" data-a="cx">取消</button></div></div>`:''}
+</div>`});
+  }
+  h+='</div>'});
+ $('list').innerHTML=h;
+}
+$('list').onclick=e=>{
+ const c=e.target.closest('[data-c]');if(c){S.collapsed[c.dataset.c]=!S.collapsed[c.dataset.c];save();render();return}
+ const a=e.target.dataset.a;if(!a)return;
+ const row=e.target.closest('.task'),t=S.tasks.find(x=>x.id===row.dataset.id);
+ if(a==='tog')t.done=e.target.checked;
+ if(a==='ed')editing=t.id;
+ if(a==='cx')editing=null;
+ if(a==='del'&&confirm('刪除「'+t.t+'」？'))S.tasks=S.tasks.filter(x=>x!==t);
+ if(a==='sv'){const g=f=>row.querySelector(`[data-f=${f}]`).value;t.t=g('t')||t.t;t.p=+g('p');t.d=g('d');t.r=+g('r');t.n=g('n');editing=null}
+ save();render()};
+$('addF').onsubmit=e=>{e.preventDefault();S.tasks.push({id:uid(),t:$('aT').value,p:+$('aP').value,d:$('aD').value,r:+$('aR').value,n:'',done:false});$('aT').value='';$('aD').value='';save();render()};
+['fS','fP','fI','fQ'].forEach(i=>$(i).oninput=render);
+
+// calc
+const f=x=>Math.round(x).toLocaleString('zh-TW');
+const pmt=(P,r,n)=>r?P*r/(1-Math.pow(1+r,-n)):P/n;
+const CI=['cPrice','cAmt','cRate','cYrs','cGrace','cInc','xPaid','xTax','xAg','xBank','xIns','xMisc'];
+CI.forEach(i=>{if(S.calc[i]!=null)$(i).value=S.calc[i];$(i).oninput=()=>{S.calc[i]=$(i).value;save();calc()}});
+function calc(){
+ const P=+cAmt.value*1e4,r=+cRate.value/1200,N=+cYrs.value*12,G=+cGrace.value*12,inc=+cInc.value;
+ const m=pmt(P,r,N-G),gi=P*r,tot=G?gi*G+m*(N-G):m*N,ratio=inc?m/inc*100:0;
+ cOut.innerHTML=(G?`<div>寬限期每月（只繳息）<b>${f(gi)}</b></div>`:'')+
+ `<div>${G?'寬限期後':''}每月月付<b>${f(m)}</b></div><div>總利息<b>${f(tot-P)}</b></div>`+
+ `<div style="${ratio>33?'background:var(--warn2)':''}">月付佔收入<b style="${ratio>33?'color:var(--hi)':''}">${ratio.toFixed(1)}%</b>${ratio>33?'<small>超過 1/3，銀行可能要求加保證人</small>':''}</div>`+
+ `<div>貸款成數<b>${(+cAmt.value/ +cPrice.value*100||0).toFixed(1)}%</b></div>`;
+ const tail=+cPrice.value-+cAmt.value-+xPaid.value;
+ const fees=+xTax.value+ +xAg.value+ +xBank.value+ +xIns.value+ +xMisc.value;
+ xOut.innerHTML=`<div>尾款差額（總價−貸款−已繳）<b>${tail.toFixed(1)} 萬</b></div><div>稅費雜支<b>${fees.toFixed(1)} 萬</b></div><div style="background:var(--warn2)">交屋前需準備現金<b style="color:var(--hi)">${(tail+fees).toFixed(1)} 萬</b></div>`;
+ renderBank();
+}
+
+// bank
+const BF=['n','rate','idx','y','g','ratio','lock','fee','cond'];
+function renderBank(){
+ const P=+cAmt.value*1e4;
+ const pays=S.banks.map(b=>b.rate&&b.y?pmt(P,b.rate/1200,b.y*12):null);
+ const valid=pays.filter(x=>x),min=valid.length?Math.min(...valid):0;
+ const tb=$('bT').tBodies[0];
+ if(document.activeElement&&tb.contains(document.activeElement)){
+  [...tb.rows].forEach((tr,i)=>{tr.className=pays[i]&&pays[i]===min&&valid.length>1?'best':'';tr.cells[9].textContent=pays[i]?f(pays[i]):'—'});return}
+ tb.innerHTML=S.banks.map((b,i)=>`<tr class="${pays[i]&&pays[i]===min&&valid.length>1?'best':''}">${BF.map(k=>`<td><input data-i="${i}" data-k="${k}" value="${esc(b[k])}" style="min-width:${k==='n'||k==='cond'||k==='idx'?'110':'60'}px"></td>`).join('')}<td>${pays[i]?f(pays[i]):'—'}</td><td><button class="g" data-del="${i}">✕</button></td></tr>`).join('');
+}
+$('bT').oninput=e=>{const d=e.target.dataset;if(d.k){S.banks[d.i][d.k]=e.target.value;save();renderBank()}};
+$('bT').onclick=e=>{const i=e.target.dataset.del;if(i!=null&&confirm('刪除這家銀行？')){S.banks.splice(i,1);save();renderBank()}};
+$('bAdd').onclick=()=>{S.banks.push(Object.fromEntries(BF.map(k=>[k,k==='y'?'30':''])));save();renderBank()};
+
+// data
+$('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='對保助手備份.json';a.click()};
+$('imp').onchange=e=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.tasks)throw 0;S=d;save();location.reload()}catch(x){alert('檔案格式不正確')}};r.readAsText(e.target.files[0])};
+$('rst').onclick=()=>{if(confirm('會清除所有勾選、待辦與比價資料，確定？')){S=fresh();save();location.reload()}};
+
+render();calc();
+if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js');
+let dp;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;$('inst').style.display='inline-block'});
+$('inst').onclick=async()=>{if(!dp)return;dp.prompt();await dp.userChoice;dp=null;$('inst').style.display='none'};
+</script>
+</body></html>
