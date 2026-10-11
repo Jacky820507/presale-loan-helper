@@ -95,6 +95,7 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <button data-t="todo" class="on">✅ 待辦清單</button>
 <button data-t="calc">🧮 試算</button>
 <button data-t="bank">🏦 銀行比價</button>
+<button data-t="insp">🔍 驗屋</button>
 <button data-t="guide">📘 首購須知</button>
 <button data-t="notify">🔔 提醒</button>
 <button data-t="data">💾 備份</button>
@@ -208,6 +209,26 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <li>優惠利率有沒有綁薪轉、信用卡、房貸壽險、理財？</li>
 <li>核貸需要多久？何時對保？撥款時程能否配合建商交屋日？</li>
 </ol></div>
+</section>
+
+<!-- INSPECT -->
+<section class="tab" id="insp">
+<div class="stats">
+<div class="stat">已檢查<b id="iPct">0%</b><div class="bar"><i id="iBar"></i></div></div>
+<div class="stat">OK<b id="iOk">0</b></div>
+<div class="stat w">瑕疵<b id="iBad">0</b></div>
+<div class="stat">已修復<b id="iFix">0</b></div>
+</div>
+<div class="card"><h2>驗屋方式</h2>
+<p style="margin:0">每一項點狀態切換：<span class="tag">未檢</span> → <span class="tag" style="background:var(--acc2)">✅ OK</span> → <span class="tag p1">❌ 瑕疵</span> → <span class="tag">🔧 已修復</span>。瑕疵可寫位置說明、拍照，最後一鍵匯出瑕疵清單給建商。</p>
+<div class="row" style="margin-top:10px"><select id="iF"><option value="all">全部項目</option><option value="todo">只看未檢</option><option value="bad">只看瑕疵</option></select>
+<button class="b" id="iShare">📤 匯出瑕疵清單</button><button class="g" id="iCsv">⬇ CSV</button></div>
+</div>
+<div class="card"><h2>🧰 要帶的工具</h2>
+<p style="margin:0">紙膠帶（標記瑕疵）、手電筒、水平儀（或手機 App）、捲尺/雷射測距儀、插座檢測器（三孔＋漏電測試）、小球/彈珠（測洩水）、空鼓錘（敲磁磚聽空鼓）、筆記板、水桶、梯子、契約平面圖與客變圖。</p></div>
+<div id="iList"></div>
+<div class="card"><h2>新增自訂項目</h2>
+<form class="row" id="iAdd"><select id="iAddA"></select><input id="iAddT" placeholder="檢查項目…" required style="flex:1;min-width:140px"><button class="b">新增</button></form></div>
 </section>
 
 <!-- GUIDE -->
@@ -457,6 +478,61 @@ aClr.onclick=()=>{if(confirm('清空貼上的內容？')){aTxt.value='';S.aTxt='
 cpScript.onclick=async()=>{try{await navigator.clipboard.writeText(script.innerText);cpScript.textContent='✓ 已複製'}catch(e){prompt('請複製：',script.innerText)}};
 // 舊資料補上詢價待辦
 if((S.v||1)<2){[T(1,'詢價① 問代銷：建商配合銀行、承辦人電話、預計對保時間',1),T(1,'詢價② 電話詢問 5–6 家（配合銀行＋公股＋薪轉銀行），填入比價表',1,'話術在「銀行比價」頁'),T(1,'詢價③ 挑 2–3 家親訪送件（注意聯徵次數）',1),T(1,'拿 A 銀行核貸通知書跟 B 銀行議價')].forEach(x=>S.tasks.push({...x,id:uid(),d:'',done:false}));S.v=2;save();render()}
+
+// ===== 驗屋清單 =====
+const IA={
+'大門與玄關':['大門開關順暢、無異音，門縫均勻','門鎖、電子鎖、門弓器（自動關門）正常','防火門標章、門框無刮傷凹痕','對講機通話、開門功能正常'],
+'牆面與天花':['油漆平整、無裂縫、無色差、無污漬','牆面垂直（水平儀檢查）','天花板無水漬、裂縫、下垂','陽角（轉角）是否筆直無破損','磁磚無空鼓（敲擊聲音一致）、無裂、縫隙均勻'],
+'地坪':['地板平整（彈珠/水平儀）、無高低差','磁磚/木地板無空鼓、刮傷、翹起','踢腳板密合','門檻與地坪銜接平順'],
+'門窗':['窗戶開關順暢、鎖扣正常','窗框四周矽利康完整、無滲水痕跡','玻璃無刮傷、裂痕，膠條完整','紗窗完整、可順暢拉動','房門開關、門鎖、門擋正常'],
+'水電':['每個插座通電（檢測器）、接地正常','漏電斷路器（廚房/浴室/陽台）跳脫測試','電燈開關、燈具全部正常','配電箱迴路標示清楚、與實際一致','弱電：網路、電視、電話孔位正確','冷氣排水孔、冷媒管預留位置正確','水表、電表、瓦斯表讀數拍照記錄'],
+'浴室':['放水測試：洩水坡度正確、無積水','排水孔排水順暢（倒一桶水）','馬桶沖水、進水正常、底座固定無滲漏','面盆、龍頭冷熱水正常，下方無滲漏','淋浴/浴缸：防水、矽利康完整','抽風機運轉正常','牆面磁磚無空鼓、縫隙填縫完整','天花板維修孔可打開，內部無漏水痕跡'],
+'廚房':['水槽、龍頭冷熱水正常，下方無滲漏','排水順暢','櫥櫃門片、抽屜、鉸鍊正常','檯面無刮傷、裂痕','瓦斯爐點火、排油煙機運轉正常','熱水器運轉正常、出熱水時間合理','安全：瓦斯偵測器、排氣'],
+'陽台':['洩水坡度正確、排水孔順暢無積水','欄杆穩固、高度符合規定','曬衣架、洗衣機給排水位置正確','外牆窗戶周圍無滲水痕跡'],
+'客變與面積':['客變項目全部依約施作','室內尺寸與平面圖相符（抽量主要房間）','坪數：登記面積與契約差異（找補）','附贈設備（冷氣、燈具等）依約安裝'],
+'公設與車位':['車位位置、編號、尺寸與契約相符','車位能否順利進出、迴轉','機車位、儲藏室（如有）','電梯、樓梯間、消防設備','信箱、垃圾處理、公設點交清單'],
+'文件與點交':['鑰匙、磁扣、遙控器數量點交','保固書（結構 15 年、設備 1 年起算日）','設備使用手冊、保證書','管線配置圖、水電圖說','瑕疵修繕約定日期、複驗日期']};
+const IS=['未檢','✅ OK','❌ 瑕疵','🔧 已修復'];
+const PK='presale-insp-photo-';
+if(!S.insp){S.insp=[];Object.entries(IA).forEach(([a,L])=>L.forEach(t=>S.insp.push({id:uid(),a,t,s:0,n:'',ph:0})));save()}
+Object.keys(IA).forEach(a=>iAddA.add(new Option(a,a)));
+let iOpen=null;
+function renderInsp(){
+ const I=S.insp,f=iF.value,c=k=>I.filter(x=>x.s===k).length;
+ const pct=I.length?Math.round((I.length-c(0))/I.length*100):0;
+ iPct.textContent=pct+'%';iBar.style.width=pct+'%';iOk.textContent=c(1);iBad.textContent=c(2);iFix.textContent=c(3);
+ const areas=[...new Set(I.map(x=>x.a))];
+ iList.innerHTML=areas.map(a=>{const all=I.filter(x=>x.a===a),v=all.filter(x=>f==='all'||(f==='todo'?x.s===0:x.s===2));
+  if(!v.length&&f!=='all')return'';const bad=all.filter(x=>x.s===2).length;
+  return`<div class="card phase"><h3 data-ic="${a}">${a} <small>${all.filter(x=>x.s).length}/${all.length}${bad?` ・<span class="late">${bad} 瑕疵</span>`:''} ${S.collapsed['i'+a]?'▸':'▾'}</small></h3>${S.collapsed['i'+a]?'':v.map(x=>{let ph=null;if(x.ph)try{ph=localStorage.getItem(PK+x.id)}catch(e){}
+   return`<div class="task" data-iid="${x.id}" style="grid-template-columns:1fr auto"><div><div class="t" style="${x.s===1||x.s===3?'color:var(--mut)':''}">${esc(x.t)}</div>${x.n?`<div class="note">📍 ${esc(x.n)}</div>`:''}${ph?`<img src="${ph}" style="max-width:120px;border-radius:6px;margin-top:4px">`:''}
+${iOpen===x.id?`<div class="edit" style="grid-column:auto"><textarea data-if="n" rows="2" placeholder="位置與狀況，例：主臥北側牆距地 1.2m 裂縫 30cm">${esc(x.n)}</textarea><div class="row"><label class="g" style="border:1px solid var(--line);padding:6px 10px;border-radius:8px;cursor:pointer">📷 拍照<input type="file" accept="image/*" capture="environment" data-if="ph" hidden></label>${ph?'<button class="g" data-ia="rmph">移除照片</button>':''}<button class="b" data-ia="sv">完成</button><button class="g" data-ia="del" style="color:var(--hi)">刪除項目</button></div></div>`:''}</div>
+<div class="row" style="flex-direction:column;align-items:flex-end;gap:4px"><button class="g" data-ia="st" style="min-width:86px;${x.s===2?'color:var(--hi);border-color:var(--hi)':x.s===1?'color:var(--acc)':''}">${IS[x.s]}</button><button class="g" data-ia="ed" style="font-size:.8rem;padding:3px 8px">📝 備註${x.ph?'・📷':''}</button></div></div>`}).join('')}</div>`}).join('');
+}
+iList.onclick=e=>{const h=e.target.closest('[data-ic]');if(h){S.collapsed['i'+h.dataset.ic]=!S.collapsed['i'+h.dataset.ic];save();renderInsp();return}
+ const a=e.target.dataset.ia;if(!a)return;const row=e.target.closest('[data-iid]'),x=S.insp.find(y=>y.id===row.dataset.iid);
+ if(a==='st'){x.s=(x.s+1)%4;if(x.s===2)iOpen=x.id}
+ if(a==='ed')iOpen=iOpen===x.id?null:x.id;
+ if(a==='sv'){x.n=row.querySelector('[data-if=n]').value;iOpen=null}
+ if(a==='rmph'){try{localStorage.removeItem(PK+x.id)}catch(e){}x.ph=0}
+ if(a==='del'&&confirm('刪除「'+x.t+'」？')){try{localStorage.removeItem(PK+x.id)}catch(e){}S.insp=S.insp.filter(y=>y!==x)}
+ save();renderInsp()};
+iList.oninput=e=>{if(e.target.dataset.if==='n'){const x=S.insp.find(y=>y.id===e.target.closest('[data-iid]').dataset.iid);x.n=e.target.value;save()}};
+iList.onchange=e=>{if(e.target.dataset.if!=='ph')return;const fl=e.target.files[0];if(!fl)return;const x=S.insp.find(y=>y.id===e.target.closest('[data-iid]').dataset.iid);
+ const im=new Image();im.onload=()=>{const k=Math.min(1,640/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+ try{localStorage.setItem(PK+x.id,c.toDataURL('image/jpeg',.6));x.ph=1;save()}catch(err){alert('手機儲存空間已滿，照片存不下。建議用手機相機另外拍，這裡只寫文字。')}URL.revokeObjectURL(im.src);renderInsp()};im.src=URL.createObjectURL(fl)};
+iF.onchange=renderInsp;
+iAdd.onsubmit=e=>{e.preventDefault();S.insp.push({id:uid(),a:iAddA.value,t:iAddT.value,s:0,n:'',ph:0});iAddT.value='';save();renderInsp()};
+const defects=()=>S.insp.filter(x=>x.s===2);
+iShare.onclick=async()=>{const D=defects();if(!D.length)return alert('目前沒有標記為瑕疵的項目');
+ const txt=`🔍 驗屋瑕疵清單（金城帝寶1號，${dstr()}）\n共 ${D.length} 項\n`+D.map((x,i)=>`\n${i+1}. 【${x.a}】${x.t}${x.n?`\n   📍 ${x.n}`:''}`).join('')+'\n\n請於約定期限內修繕，修繕完成後安排複驗，謝謝。';
+ const files=[];D.forEach((x,i)=>{if(!x.ph)return;try{const d=localStorage.getItem(PK+x.id);if(!d)return;const b=atob(d.split(',')[1]),u=new Uint8Array(b.length);for(let k=0;k<b.length;k++)u[k]=b.charCodeAt(k);files.push(new File([u],`瑕疵${i+1}.jpg`,{type:'image/jpeg'}))}catch(e){}});
+ if(navigator.share){try{const d={title:'驗屋瑕疵清單',text:txt};if(files.length&&navigator.canShare?.({files}))d.files=files;await navigator.share(d);return}catch(e){if(e.name==='AbortError')return}}
+ try{await navigator.clipboard.writeText(txt);alert('已複製瑕疵清單')}catch(e){prompt('請複製：',txt)}};
+iCsv.onclick=()=>{const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+ const L=[['區域','項目','狀態','位置與說明','照片'].map(q).join(','),...S.insp.filter(x=>x.s).map(x=>[x.a,x.t,IS[x.s].replace(/^\S+ /,''),x.n,x.ph?'有':''].map(q).join(','))];
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+L.join('\r\n')],{type:'text/csv'}));a.download=`驗屋紀錄_${dstr()}.csv`;a.click()};
+renderInsp();
 
 // data
 $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='對保助手備份.json';a.click()};
