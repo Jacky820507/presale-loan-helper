@@ -170,7 +170,9 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <p class="sub">每家銀行問一樣的問題，填完會自動標出月付最低的一家。</p>
 <div class="tw"><table id="bT"><thead><tr>
 <th>銀行</th><th>利率%</th><th>指數＋加碼</th><th>年限</th><th>寬限</th><th>成數</th><th>綁約/違約金</th><th>開辦+帳管費</th><th>要求條件</th><th>月付</th><th></th></tr></thead><tbody></tbody></table></div>
-<div class="row" style="margin-top:10px"><button class="g" id="bAdd">＋ 新增銀行</button></div>
+<div class="row" style="margin-top:10px"><button class="g" id="bAdd">＋ 新增銀行</button>
+<button class="b" id="bCsv">⬇ 匯出 Excel (CSV)</button>
+<button class="g" id="bShare">📤 分享文字（LINE）</button></div>
 </div>
 <div class="card"><h2>打給銀行時要問的問題</h2>
 <ol>
@@ -374,6 +376,21 @@ function renderBank(){
 $('bT').oninput=e=>{const d=e.target.dataset;if(d.k){S.banks[d.i][d.k]=e.target.value;save();renderBank()}};
 $('bT').onclick=e=>{const i=e.target.dataset.del;if(i!=null&&confirm('刪除這家銀行？')){S.banks.splice(i,1);save();renderBank()}};
 $('bAdd').onclick=()=>{S.banks.push(Object.fromEntries(BF.map(k=>[k,k==='y'?'30':''])));save();renderBank()};
+
+// 銀行比價匯出
+const BH=['銀行','利率%','指數＋加碼','年限','寬限','成數','綁約/違約金','開辦+帳管費','要求條件'];
+function bankRows(){const P=+cAmt.value*1e4;return S.banks.filter(b=>BF.some(k=>b[k]&&k!=='y')).map(b=>{const m=b.rate&&b.y?pmt(P,b.rate/1200,b.y*12):null;return{b,m,tot:m?m*b.y*12-P:null}})}
+const dstr=()=>new Date().toISOString().slice(0,10);
+$('bCsv').onclick=()=>{const R=bankRows();if(!R.length)return alert('比價表還是空的');
+ const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+ const lines=[[`貸款金額 ${cAmt.value} 萬`,`匯出日 ${dstr()}`].map(q).join(','),[...BH,'月付(元)','總利息(元)'].map(q).join(','),
+  ...R.map(({b,m,tot})=>[...BF.map(k=>b[k]),m?Math.round(m):'',tot?Math.round(tot):''].map(q).join(','))];
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv'}));a.download=`銀行比價_${dstr()}.csv`;a.click()};
+$('bShare').onclick=async()=>{const R=bankRows();if(!R.length)return alert('比價表還是空的');
+ const min=Math.min(...R.filter(x=>x.m).map(x=>x.m));
+ const txt=`🏦 房貸比價（貸款 ${cAmt.value} 萬，${dstr()}）\n`+R.map(({b,m})=>`\n${m===min?'⭐ ':''}${b.n||'未命名'}\n利率 ${b.rate||'—'}%｜${b.y||'—'}年｜寬限 ${b.g||'—'}｜成數 ${b.ratio||'—'}\n月付 ${m?f(m)+' 元':'—'}`+(b.lock?`\n綁約：${b.lock}`:'')+(b.fee?`\n費用：${b.fee}`:'')+(b.cond?`\n條件：${b.cond}`:'')).join('\n');
+ if(navigator.share){try{await navigator.share({title:'房貸比價',text:txt})}catch(e){}}
+ else{try{await navigator.clipboard.writeText(txt);alert('已複製，可貼到 LINE')}catch(e){prompt('請複製：',txt)}}};
 
 // data
 $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='對保助手備份.json';a.click()};
