@@ -113,6 +113,8 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <p class="sub" style="margin:10px 0 4px">資料來自公開建案網站，以實際契約為準。照片請用你自己拍的或從建案網站存的圖，只會存在這支手機。</p>
 <div class="links"><a href="https://build.myhousing.com.tw/215965/" target="_blank" rel="noopener">住展雜誌</a><a href="https://newhouse.591.com.tw/home/housing/detail?hid=132959" target="_blank" rel="noopener">591 新建案</a><a href="https://community.houseprice.tw/building/163601/" target="_blank" rel="noopener">實價登錄</a></div>
 <div class="row" style="margin-top:10px">預計交屋日 <input type="date" id="moveD"></div></div>
+<div class="card"><h2>📊 三大流程總覽</h2>
+<div id="overview" style="display:grid;gap:10px"></div></div>
 <div id="dueBox"></div>
 <div class="stats">
 <div class="stat">整體進度<b id="sPct">0%</b><div class="bar"><i id="sBar"></i></div></div>
@@ -642,7 +644,7 @@ renderReno();renderBudget();
 // data
 $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='對保助手備份.json';a.click()};
 $('imp').onchange=e=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.tasks)throw 0;S=d;save();location.reload()}catch(x){alert('檔案格式不正確')}};r.readAsText(e.target.files[0])};
-$('rst').onclick=()=>{if(confirm('會清除所有勾選、待辦與比價資料，確定？')){S=fresh();save();location.reload()}};
+$('rst').onclick=()=>{if(confirm('會清除所有勾選、待辦、銀行比價、驗屋紀錄與裝修預算，確定？')){S=fresh();try{Object.keys(localStorage).filter(k=>k.startsWith(PK)).forEach(k=>localStorage.removeItem(k))}catch(e){}save();location.reload()}};
 
 render();calc();
 // 封面照片：壓縮後存在本機
@@ -682,7 +684,20 @@ function dlICS(ts,name){const pad=n=>String(n).padStart(2,'0');const stamp=new D
  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//presale-loan//TW','CALSCALE:GREGORIAN',...ev,'END:VCALENDAR'].join('\r\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download=(name||'對保待辦').slice(0,30)+'.ics';a.click()}
 icsAll.onclick=()=>{const L=S.tasks.filter(t=>!t.done&&t.d);if(!L.length)return alert('還沒有設到期日的未完成待辦');dlICS(L,'對保待辦')};
-const _r=render;render=function(){_r();dueBanner()};
+// ===== 首頁三大流程總覽 =====
+function renderOverview(){
+ const mk=(label,tab,done,total,hint)=>{const pct=total?Math.round(done/total*100):0;
+  return`<div data-ovtab="${tab}" style="cursor:pointer"><div class="row" style="justify-content:space-between;margin-bottom:3px"><b>${label}</b><span class="sub">${done}/${total}${hint?'　'+hint:''}</span></div><div class="bar"><i style="width:${pct}%"></i></div></div>`};
+ const tDone=S.tasks.filter(t=>t.done).length,tAll=S.tasks.length;
+ const iDone=S.insp.filter(x=>x.s).length,iAll=S.insp.length,iBadN=S.insp.filter(x=>x.s===2).length;
+ const rDone=S.rTasks.filter(t=>t.done).length,rAll=S.rTasks.length;
+ overview.innerHTML=mk('① 對保準備','todo',tDone,tAll)+mk('② 驗屋','insp',iDone,iAll,iBadN?`⚠ ${iBadN} 項瑕疵`:'')+mk('③ 裝修','reno',rDone,rAll);
+ overview.querySelectorAll('[data-ovtab]').forEach(el=>el.onclick=()=>document.querySelector(`nav button[data-t="${el.dataset.ovtab}"]`).click());
+}
+const _r=render;render=function(){_r();dueBanner();renderOverview()};
+const _ri=renderInsp;renderInsp=function(){_ri();renderOverview()};
+const _rr=renderReno;renderReno=function(){_rr();renderOverview()};
+renderOverview();
 nStatus();dueBanner();notifyDue();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){dueBanner();notifyDue()}});
 if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js');
