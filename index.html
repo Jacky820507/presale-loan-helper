@@ -253,6 +253,11 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <div class="tw"><table id="rT"><thead><tr><th>項目</th><th>類別</th><th>廠商</th><th>預算</th><th>實付</th><th>差額</th><th>備註</th><th></th></tr></thead><tbody></tbody></table></div>
 <div class="row" style="margin-top:10px"><button class="g" id="rBAdd">＋ 新增項目</button><button class="b" id="rCsv">⬇ 匯出 CSV</button></div>
 </div>
+<div class="card"><h2>🏗 分包商比價</h2>
+<p class="sub">同一工項填多家廠商報價，最低價那列會自動標出來。例如「廚房拆除」分別問 A、B、C 三家。</p>
+<div class="tw"><table id="vT"><thead><tr><th>工項</th><th>廠商</th><th>報價</th><th>工期(天)</th><th>保固</th><th>備註</th><th></th></tr></thead><tbody></tbody></table></div>
+<div class="row" style="margin-top:10px"><button class="g" id="vAdd">＋ 新增報價</button><button class="b" id="vCsv">⬇ 匯出 CSV</button><button class="g" id="vShare">📤 分享文字（LINE）</button></div>
+</div>
 <div class="card"><h2>📐 收納與材質備忘（建築師視角）</h2>
 <ul style="margin:0;padding-left:1.2em">
 <li>拆除前拍好全室現況照與水電管線位置，避免事後打到管線</li>
@@ -639,12 +644,36 @@ rBAdd.onclick=()=>{S.rBudget.push({item:'',cat:'',vendor:'',bud:'',act:'',note:'
 rCsv.onclick=()=>{const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
  const L=[['項目','類別','廠商','預算','實付','差額','備註'].map(q).join(','),...S.rBudget.map(r=>[r.item,r.cat,r.vendor,r.bud,r.act,(+r.act||0)-(+r.bud||0),r.note].map(q).join(','))];
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+L.join('\r\n')],{type:'text/csv'}));a.download=`裝修預算_${dstr()}.csv`;a.click()};
-renderReno();renderBudget();
+// 分包商比價
+if(!S.rVendors)S.rVendors=[];
+const VF=['task','vendor','price','days','warranty','note'];
+function renderVendor(){const tb=vT.tBodies[0];
+ const bestIds=new Set();const byTask={};S.rVendors.forEach((v,i)=>{if(!v.task)return;(byTask[v.task]=byTask[v.task]||[]).push(i)});
+ Object.values(byTask).forEach(ids=>{const priced=ids.filter(i=>+S.rVendors[i].price>0);if(priced.length<2)return;
+  const min=Math.min(...priced.map(i=>+S.rVendors[i].price));const best=priced.find(i=>+S.rVendors[i].price===min);bestIds.add(best)});
+ if(document.activeElement&&tb.contains(document.activeElement)){
+  [...tb.rows].forEach((tr,i)=>tr.className=bestIds.has(i)?'best':'');return}
+ tb.innerHTML=S.rVendors.map((v,i)=>`<tr class="${bestIds.has(i)?'best':''}">${VF.map(k=>`<td><input data-vi="${i}" data-vk="${k}" value="${esc(v[k])}" style="min-width:${k==='task'||k==='note'?'100':k==='vendor'?'80':'60'}px" ${k==='price'||k==='days'?'type=number':''}></td>`).join('')}<td><button class="g" data-vdel="${i}">✕</button></td></tr>`).join('');
+}
+vT.oninput=e=>{const d=e.target.dataset;if(d.vk){S.rVendors[d.vi][d.vk]=e.target.value;save();renderVendor()}};
+vT.onclick=e=>{const i=e.target.dataset.vdel;if(i!=null&&confirm('刪除這筆報價？')){S.rVendors.splice(i,1);save();renderVendor()}};
+vAdd.onclick=()=>{S.rVendors.push({task:'',vendor:'',price:'',days:'',warranty:'',note:''});save();renderVendor()};
+vCsv.onclick=()=>{if(!S.rVendors.length)return alert('還沒有任何報價');const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+ const L=[['工項','廠商','報價','工期(天)','保固','備註'].map(q).join(','),...S.rVendors.map(v=>VF.map(k=>v[k]).map(q).join(','))];
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+L.join('\r\n')],{type:'text/csv'}));a.download=`裝修分包比價_${dstr()}.csv`;a.click()};
+vShare.onclick=async()=>{if(!S.rVendors.length)return alert('還沒有任何報價');
+ const byTask={};S.rVendors.forEach(v=>{if(!v.task)return;(byTask[v.task]=byTask[v.task]||[]).push(v)});
+ const txt=`🏗 裝修分包比價（${dstr()}）\n`+Object.entries(byTask).map(([task,vs])=>{
+  const sorted=[...vs].sort((a,b)=>(+a.price||1e15)-(+b.price||1e15));const min=sorted.find(v=>+v.price>0)?.price;
+  return`\n【${task}】\n`+sorted.map(v=>`${v.price&&v.price===min?'⭐ ':''}${v.vendor||'未命名廠商'}　${v.price?f(+v.price)+' 元':'—'}${v.days?`｜${v.days}天`:''}${v.warranty?`｜保固${v.warranty}`:''}${v.note?`\n   📍 ${v.note}`:''}`).join('\n')}).join('\n');
+ if(navigator.share){try{await navigator.share({title:'裝修分包比價',text:txt});return}catch(e){if(e.name==='AbortError')return}}
+ try{await navigator.clipboard.writeText(txt);alert('已複製，可貼到 LINE')}catch(e){prompt('請複製：',txt)}};
+renderReno();renderBudget();renderVendor();
 
 // data
 $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='對保助手備份.json';a.click()};
 $('imp').onchange=e=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.tasks)throw 0;S=d;save();location.reload()}catch(x){alert('檔案格式不正確')}};r.readAsText(e.target.files[0])};
-$('rst').onclick=()=>{if(confirm('會清除所有勾選、待辦、銀行比價、驗屋紀錄與裝修預算，確定？')){S=fresh();try{Object.keys(localStorage).filter(k=>k.startsWith(PK)).forEach(k=>localStorage.removeItem(k))}catch(e){}save();location.reload()}};
+$('rst').onclick=()=>{if(confirm('會清除所有勾選、待辦、銀行比價、驗屋紀錄、裝修預算與分包比價，確定？')){S=fresh();try{Object.keys(localStorage).filter(k=>k.startsWith(PK)).forEach(k=>localStorage.removeItem(k))}catch(e){}save();location.reload()}};
 
 render();calc();
 // 封面照片：壓縮後存在本機
