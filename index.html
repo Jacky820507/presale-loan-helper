@@ -184,6 +184,20 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <button class="g" id="aClr">清空</button></div>
 <div id="aOut" style="margin-top:12px"></div>
 </div>
+<div class="card"><h2>🗺 詢價三步驟</h2>
+<div class="warnbox">詢價不會查聯徵，可以多問；<b>正式送件才會查聯徵</b>，短期內被查太多次會拉低評分，送件控制在 2–3 家。</div>
+<dl>
+<dt>① 問建商配合銀行（1 天）</dt><dd>問代銷：有哪幾家整批分戶貸款銀行、承辦人電話、預計對保時間。配合銀行流程最順，但利率不一定最好。</dd>
+<dt>② 電話初步詢價（1–2 週，5–6 家）</dt><dd>建商配合銀行＋公股（台銀、土銀、合庫、一銀、華南、彰銀）＋薪轉銀行＋往來銀行。打分行找「房貸業務」，報價填進上方比價表。</dd>
+<dt>③ 挑 2–3 家親訪送件</dt><dd>帶齊文件正式申請。拿到核貸通知書後，用 A 銀行的書面條件去跟 B 銀行議價。一天最多排 2 家。</dd>
+</dl>
+<h3 style="font-size:.95rem;margin:14px 0 6px">📞 電話詢價話術</h3>
+<div id="script" style="background:var(--acc2);border-radius:10px;padding:12px;font-size:.92rem">您好，我想詢問首購房貸。我買的是土城甲山林「金城帝寶1號」預售屋，預計 2026 年第三季交屋，想貸約 1,000 萬、30 年。請問首購大概利率和成數多少？有沒有寬限期、綁約和手續費的條件？</div>
+<div class="row" style="margin-top:8px"><button class="g" id="cpScript">📋 複製話術</button></div>
+<h3 style="font-size:.95rem;margin:14px 0 6px">電話前先想好這些數字（不用帶文件）</h3>
+<ul style="margin:0;padding-left:1.2em"><li>年收入、月薪、薪轉銀行、職業與年資</li><li>現有負債：車貸、信貸、信用卡分期</li><li>總價、要貸多少、已繳多少</li></ul>
+<p class="sub">業務推房貸壽險、信用卡時，先說「之後再考慮」，專心談利率。同一家銀行不同分行條件也可能不同。</p>
+</div>
 <div class="card"><h2>打給銀行時要問的問題</h2>
 <ol>
 <li>首購可核幾成？鑑價大概多少？（預售屋鑑價常低於成交價）</li>
@@ -439,6 +453,10 @@ aTxt.value=S.aTxt||'';aTxt.oninput=()=>{S.aTxt=aTxt.value;save()};
 aFile.onchange=async e=>{const t=await Promise.all([...e.target.files].map(f=>f.text()));aTxt.value=(aTxt.value?aTxt.value+'\n\n':'')+t.join('\n\n');S.aTxt=aTxt.value;save();e.target.value='';aGo.click()};
 aGo.onclick=()=>renderAnalysis(analyze(aTxt.value,aNoQ.checked));
 aClr.onclick=()=>{if(confirm('清空貼上的內容？')){aTxt.value='';S.aTxt='';save();aOut.innerHTML=''}};
+
+cpScript.onclick=async()=>{try{await navigator.clipboard.writeText(script.innerText);cpScript.textContent='✓ 已複製'}catch(e){prompt('請複製：',script.innerText)}};
+// 舊資料補上詢價待辦
+if((S.v||1)<2){[T(1,'詢價① 問代銷：建商配合銀行、承辦人電話、預計對保時間',1),T(1,'詢價② 電話詢問 5–6 家（配合銀行＋公股＋薪轉銀行），填入比價表',1,'話術在「銀行比價」頁'),T(1,'詢價③ 挑 2–3 家親訪送件（注意聯徵次數）',1),T(1,'拿 A 銀行核貸通知書跟 B 銀行議價')].forEach(x=>S.tasks.push({...x,id:uid(),d:'',done:false}));S.v=2;save();render()}
 
 // data
 $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='對保助手備份.json';a.click()};
