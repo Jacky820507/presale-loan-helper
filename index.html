@@ -275,6 +275,15 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <div class="tw"><table id="vT"><thead><tr><th>工項</th><th>廠商</th><th>報價</th><th>工期(天)</th><th>保固</th><th>備註</th><th></th></tr></thead><tbody></tbody></table></div>
 <div class="row" style="margin-top:10px"><button class="g" id="vAdd">＋ 新增報價</button><button class="b" id="vCsv">⬇ 匯出 CSV</button><button class="g" id="vShare">📤 分享文字（LINE）</button></div>
 </div>
+<div class="card"><h2>📊 網友裝修報價分享分析</h2>
+<p class="sub">把 Threads、PTT、Dcard 上看到的裝修報價貼文複製貼上，或匯入 .txt。每篇之間空一行。分析全部在手機上完成，不會上傳。</p>
+<textarea id="rATxt" rows="6" style="width:100%" placeholder="例：&#10;泥作抓一坪 5000 算便宜&#10;&#10;系統櫃一尺大概 3000-4000…"></textarea>
+<div class="row" style="margin-top:8px">
+<label class="g" style="border:1px solid var(--line);padding:6px 10px;border-radius:8px;cursor:pointer">📄 匯入 TXT<input type="file" id="rAFile" accept=".txt,text/plain" multiple hidden></label>
+<button class="b" id="rAGo">分析</button>
+<button class="g" id="rAClr">清空</button></div>
+<div id="rAOut" style="margin-top:12px"></div>
+</div>
 <div class="card"><h2>📐 收納與材質備忘（建築師視角）</h2>
 <ul style="margin:0;padding-left:1.2em">
 <li>拆除前拍好全室現況照與水電管線位置，避免事後打到管線</li>
@@ -687,10 +696,43 @@ vShare.onclick=async()=>{if(!S.rVendors.length)return alert('還沒有任何報�
  try{await navigator.clipboard.writeText(txt);alert('已複製，可貼到 LINE')}catch(e){prompt('請複製：',txt)}};
 renderReno();renderBudget();renderVendor();
 
+// ===== 網友裝修報價分享分析 =====
+const RCATS=['拆除','水電','泥作','防水','磁磚','油漆','木作','系統櫃','廚具','衛浴','鋁窗','氣密窗','冷氣','地板','超耐磨','窗簾','石材','玻璃','清潔','隔間','輕隔間','天花板','燈具'];
+const CAT_RE=new RegExp(RCATS.join('|'),'g');
+function analyzeReno(txt){
+ const segs=txt.split(/\n\s*\n+/).map(s=>s.trim()).filter(Boolean);const hits=[];
+ segs.forEach(s=>{
+  const cm=[];CAT_RE.lastIndex=0;let cmh;while(cmh=CAT_RE.exec(s))cm.push({i:cmh.index,c:cmh[0]});cm.sort((a,b)=>a.i-b.i);
+  const date=(s.match(/(20\d\d)[\/.\-年](\d{1,2})(?:[\/.\-月](\d{1,2}))?/)||[])[0]||'';
+  const pr=/(\d[\d,]{2,})\s*(萬|元)(\s*[\/每]\s*(坪|尺|才|式|米|公尺))?/g;let m;
+  while(m=pr.exec(s)){let v=+m[1].replace(/,/g,'');if(m[2]==='萬')v*=10000;if(v<50||v>5000000)continue;
+   const prev=cm.filter(c=>c.i<=m.index).pop()||cm.find(c=>c.i>m.index&&c.i-m.index<15);
+   const ctx=s.slice(Math.max(0,m.index-20),m.index+20).replace(/\s+/g,' ');
+   hits.push({cat:prev?prev.c:'未分類',v,unit:m[4]||'',date,ctx})}
+ });
+ return{segs:segs.length,hits}}
+function renderRenoAnalysis(r){
+ if(!r.hits.length){rAOut.innerHTML=`<div class="sub">在 ${r.segs} 篇中找不到像「5000元/坪」「3萬」這樣的金額。</div>`;return}
+ const g={};r.hits.forEach(h=>(g[h.cat]=g[h.cat]||[]).push(h));
+ const med=a=>{const s=[...a].sort((x,y)=>x-y),k=s.length>>1;return s.length%2?s[k]:(s[k-1]+s[k])/2};
+ const rows=Object.entries(g).map(([c,hs])=>{const v=hs.map(h=>h.v);return{c,hs,n:v.length,min:Math.min(...v),max:Math.max(...v),med:med(v)}}).sort((a,b)=>a.c==='未分類'?1:b.c==='未分類'?-1:b.n-a.n);
+ rAOut.innerHTML=`<div class="sub" style="margin-bottom:8px">共 ${r.segs} 篇，找到 ${r.hits.length} 筆金額。⚠ 單位常混用（元/坪、元/尺、總價），請展開原文核對，不是同一單位不能直接比。</div>
+<div class="tw"><table><thead><tr><th>工項</th><th>筆數</th><th>最低</th><th>中位數</th><th>最高</th><th></th></tr></thead><tbody>
+${rows.map((x,i)=>`<tr><td>${x.c}</td><td>${x.n}</td><td>${f(x.min)}</td><td><b>${f(x.med)}</b></td><td>${f(x.max)}</td><td>${x.c!=='未分類'?`<button class="g" data-raddv="${i}">＋比價表</button>`:''}</td></tr>`).join('')}
+</tbody></table></div>
+<details style="margin-top:10px"><summary class="sub" style="cursor:pointer">查看每一筆原文片段（核對有沒有抓錯、確認單位）</summary>
+<table style="margin-top:6px"><tbody>${r.hits.map(h=>`<tr><td>${h.cat}</td><td><b>${f(h.v)}</b>${h.unit?`<small> /${h.unit}</small>`:''}</td><td><small>${esc(h.ctx)}</small>${h.date?`<br><small>📅 ${h.date}</small>`:''}</td></tr>`).join('')}</tbody></table></details>`;
+ rAOut.querySelectorAll('[data-raddv]').forEach(b=>b.onclick=()=>{const x=rows[b.dataset.raddv];
+  S.rVendors.push({task:x.c,vendor:'網友分享',price:Math.round(x.med),days:'',warranty:'',note:`${x.n} 筆，${f(x.min)}–${f(x.max)}，單位請核對`});save();renderVendor();b.textContent='✓ 已加入';b.disabled=true})}
+rATxt.value=S.rATxt||'';rATxt.oninput=()=>{S.rATxt=rATxt.value;save()};
+rAFile.onchange=async e=>{const t=await Promise.all([...e.target.files].map(f=>f.text()));rATxt.value=(rATxt.value?rATxt.value+'\n\n':'')+t.join('\n\n');S.rATxt=rATxt.value;save();e.target.value='';rAGo.click()};
+rAGo.onclick=()=>renderRenoAnalysis(analyzeReno(rATxt.value));
+rAClr.onclick=()=>{if(confirm('清空貼上的內容？')){rATxt.value='';S.rATxt='';save();rAOut.innerHTML=''}};
+
 // data
 $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='對保助手備份.json';a.click()};
 $('imp').onchange=e=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.tasks)throw 0;S=d;save();location.reload()}catch(x){alert('檔案格式不正確')}};r.readAsText(e.target.files[0])};
-$('rst').onclick=()=>{if(confirm('會清除所有勾選、待辦、銀行比價、驗屋紀錄、裝修預算、分包比價與重要日期，確定？')){S=fresh();try{Object.keys(localStorage).filter(k=>k.startsWith(PK)).forEach(k=>localStorage.removeItem(k))}catch(e){}save();location.reload()}};
+$('rst').onclick=()=>{if(confirm('會清除所有勾選、待辦、銀行比價、驗屋紀錄、裝修預算、分包比價、網友報價分析與重要日期，確定？')){S=fresh();try{Object.keys(localStorage).filter(k=>k.startsWith(PK)).forEach(k=>localStorage.removeItem(k))}catch(e){}save();location.reload()}};
 
 render();calc();
 // 封面照片：壓縮後存在本機
