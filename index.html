@@ -174,6 +174,16 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <button class="b" id="bCsv">⬇ 匯出 Excel (CSV)</button>
 <button class="g" id="bShare">📤 分享文字（LINE）</button></div>
 </div>
+<div class="card"><h2>📊 網友利率分享分析</h2>
+<p class="sub">把 Threads、PTT、Dcard 上看到的貼文複製貼上，或匯入 .txt。每篇之間空一行。分析全部在手機上完成，不會上傳。</p>
+<textarea id="aTxt" rows="6" style="width:100%" placeholder="例：&#10;剛對保完 台銀首購 2.38% 綁約3年 30年&#10;&#10;國泰問了說要2.6%起…"></textarea>
+<div class="row" style="margin-top:8px">
+<label class="g" style="border:1px solid var(--line);padding:6px 10px;border-radius:8px;cursor:pointer">📄 匯入 TXT<input type="file" id="aFile" accept=".txt,text/plain" multiple hidden></label>
+<button class="b" id="aGo">分析</button>
+<label class="row" style="gap:4px"><input type="checkbox" id="aNoQ" checked>排除新青安、信貸</label>
+<button class="g" id="aClr">清空</button></div>
+<div id="aOut" style="margin-top:12px"></div>
+</div>
 <div class="card"><h2>打給銀行時要問的問題</h2>
 <ol>
 <li>首購可核幾成？鑑價大概多少？（預售屋鑑價常低於成交價）</li>
@@ -391,6 +401,44 @@ $('bShare').onclick=async()=>{const R=bankRows();if(!R.length)return alert('比�
  const txt=`🏦 房貸比價（貸款 ${cAmt.value} 萬，${dstr()}）\n`+R.map(({b,m})=>`\n${m===min?'⭐ ':''}${b.n||'未命名'}\n利率 ${b.rate||'—'}%｜${b.y||'—'}年｜寬限 ${b.g||'—'}｜成數 ${b.ratio||'—'}\n月付 ${m?f(m)+' 元':'—'}`+(b.lock?`\n綁約：${b.lock}`:'')+(b.fee?`\n費用：${b.fee}`:'')+(b.cond?`\n條件：${b.cond}`:'')).join('\n');
  if(navigator.share){try{await navigator.share({title:'房貸比價',text:txt})}catch(e){}}
  else{try{await navigator.clipboard.writeText(txt);alert('已複製，可貼到 LINE')}catch(e){prompt('請複製：',txt)}}};
+
+// 網友利率分析（規則式，純本機）
+const BANKS=[['臺灣銀行','台銀|臺銀|台灣銀行|臺灣銀行'],['土地銀行','土銀|土地銀行'],['合作金庫','合庫|合作金庫'],['第一銀行','一銀|第一銀行'],['華南銀行','華南'],['彰化銀行','彰銀|彰化銀行'],['兆豐銀行','兆豐'],['臺灣企銀','台企|臺企|企銀'],['國泰世華','國泰'],['中國信託','中信|中國信託'],['玉山銀行','玉山'],['台新銀行','台新'],['富邦銀行','富邦'],['永豐銀行','永豐'],['凱基銀行','凱基'],['元大銀行','元大'],['星展銀行','星展'],['渣打銀行','渣打'],['王道銀行','王道'],['將來銀行','將來'],['上海商銀','上海商銀|上海銀行|上銀'],['新光銀行','新光'],['遠東商銀','遠銀|遠東'],['安泰銀行','安泰'],['聯邦銀行','聯邦'],['陽信銀行','陽信'],['京城銀行','京城'],['板信銀行','板信'],['華泰銀行','華泰'],['高雄銀行','高雄銀'],['匯豐銀行','匯豐'],['瑞興銀行','瑞興'],['三信銀行','三信']].map(([n,p])=>[n,new RegExp(p,'g')]);
+function analyze(txt,noQ){
+ const segs=txt.split(/\n\s*\n+/).map(s=>s.trim()).filter(Boolean);const hits=[];let skipped=0;
+ segs.forEach((s,si)=>{
+  if(noQ&&/新青安|青安|信貸|信用貸款/.test(s)){skipped++;return}
+  const bm=[];BANKS.forEach(([n,re])=>{re.lastIndex=0;let m;while(m=re.exec(s))bm.push({i:m.index,n})});bm.sort((a,b)=>a.i-b.i);
+  const date=(s.match(/(20\d\d)[\/.\-年](\d{1,2})(?:[\/.\-月](\d{1,2}))?/)||[])[0]||'';
+  const rr=/(\d\.\d{1,3})\s*[%％]/g;let m;
+  while(m=rr.exec(s)){const v=+m[1];if(v<1.5||v>4)continue;
+   const prev=bm.filter(b=>b.i<=m.index).pop()||bm.find(b=>b.i>m.index&&b.i-m.index<20);
+   const ctx=s.slice(Math.max(0,m.index-25),m.index+15).replace(/\s+/g,' ');
+   hits.push({bank:prev?prev.n:'未指明銀行',v,date,ctx,seg:si,first:/首購/.test(s),qi:/起/.test(s.slice(m.index,m.index+8))})}
+ });
+ return{segs:segs.length,skipped,hits}}
+function renderAnalysis(r){
+ if(!r.hits.length){aOut.innerHTML=`<div class="sub">在 ${r.segs} 篇中找不到利率數字（格式像「2.38%」）。${r.skipped?`已排除 ${r.skipped} 篇新青安/信貸。`:''}</div>`;return}
+ const g={};r.hits.forEach(h=>(g[h.bank]=g[h.bank]||[]).push(h));
+ const med=a=>{const s=[...a].sort((x,y)=>x-y),k=s.length>>1;return s.length%2?s[k]:(s[k-1]+s[k])/2};
+ const rows=Object.entries(g).map(([b,hs])=>{const v=hs.map(h=>h.v);return{b,hs,n:v.length,min:Math.min(...v),max:Math.max(...v),med:med(v)}}).sort((a,b)=>a.b==='未指明銀行'?1:b.b==='未指明銀行'?-1:a.med-b.med);
+ const all=r.hits.map(h=>h.v),lo=Math.min(...all),hi=Math.max(...all),span=Math.max(hi-lo,.2);
+ const pos=v=>((v-lo)/span*100).toFixed(1)+'%';
+ aOut.innerHTML=`<div class="out" style="margin:0 0 12px"><div>貼文數<b>${r.segs}</b>${r.skipped?`<small>排除 ${r.skipped} 篇</small>`:''}</div><div>找到利率<b>${all.length} 筆</b></div><div>中位數<b>${med(all).toFixed(2)}%</b></div><div>範圍<b>${lo}–${hi}%</b></div></div>
+<div class="tw"><table><thead><tr><th>銀行</th><th>筆數</th><th>最低</th><th>中位數</th><th>最高</th><th style="min-width:120px">分布</th><th></th></tr></thead><tbody>
+${rows.map((x,i)=>`<tr><td>${x.b}</td><td>${x.n}</td><td>${x.min}%</td><td><b>${x.med.toFixed(2)}%</b></td><td>${x.max}%</td>
+<td><div style="position:relative;height:14px;background:var(--line);border-radius:7px"><div style="position:absolute;left:${pos(x.min)};width:calc(${pos(x.max)} - ${pos(x.min)} + 6px);height:14px;background:var(--acc);opacity:.35;border-radius:7px"></div><div style="position:absolute;left:${pos(x.med)};width:6px;height:14px;background:var(--acc);border-radius:3px"></div></div></td>
+<td>${x.b!=='未指明銀行'?`<button class="g" data-addb="${i}">＋比價表</button>`:''}</td></tr>`).join('')}
+</tbody></table></div>
+<details style="margin-top:10px"><summary class="sub" style="cursor:pointer">查看每一筆原文片段（核對有沒有抓錯）</summary>
+<table style="margin-top:6px"><tbody>${r.hits.map(h=>`<tr><td>${h.bank}</td><td><b>${h.v}%</b>${h.qi?'<small> 起</small>':''}</td><td><small>${esc(h.ctx)}</small>${h.date?`<br><small>📅 ${h.date}</small>`:''}</td></tr>`).join('')}</tbody></table></details>
+<p class="sub">⚠ 規則式自動判讀：利率會歸給「前面最近提到的銀行」，可能抓錯，請展開原文核對。網友分享不代表你能核到的利率。</p>`;
+ aOut.querySelectorAll('[data-addb]').forEach(b=>b.onclick=()=>{const x=rows[b.dataset.addb];
+  S.banks.push({n:x.b,rate:x.med.toFixed(2),idx:'',y:'30',g:'',ratio:'',lock:'',fee:'',cond:`網友分享 ${x.n} 筆，${x.min}–${x.max}%`});save();renderBank();b.textContent='✓ 已加入';b.disabled=true})}
+aTxt.value=S.aTxt||'';aTxt.oninput=()=>{S.aTxt=aTxt.value;save()};
+aFile.onchange=async e=>{const t=await Promise.all([...e.target.files].map(f=>f.text()));aTxt.value=(aTxt.value?aTxt.value+'\n\n':'')+t.join('\n\n');S.aTxt=aTxt.value;save();e.target.value='';aGo.click()};
+aGo.onclick=()=>renderAnalysis(analyze(aTxt.value,aNoQ.checked));
+aClr.onclick=()=>{if(confirm('清空貼上的內容？')){aTxt.value='';S.aTxt='';save();aOut.innerHTML=''}};
 
 // data
 $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='對保助手備份.json';a.click()};
