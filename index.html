@@ -112,6 +112,7 @@ dl{margin:0}dt{font-weight:600;margin-top:10px}dd{margin:2px 0 0;color:var(--mut
 <main>
 <!-- TODO -->
 <section class="tab on" id="todo">
+<div class="card" id="nextCard" style="border-color:var(--acc)"><h2>👉 下一步</h2><div id="nextBody"></div></div>
 <div class="hero" id="hero"><img id="heroImg" alt="" hidden>
 <div class="pb"><label>📷 換照片<input type="file" id="heroF" accept="image/*" hidden></label><button id="heroX" hidden>移除</button></div>
 <div class="ov"><h2>甲山林 金城帝寶1號</h2><div class="k">新北市土城區中央路三段｜板南線永寧站約 250 m｜預計 2026 Q3 完工</div><div class="k" id="cd"></div></div></div>
@@ -795,6 +796,31 @@ function dlICS(ts,name){const pad=n=>String(n).padStart(2,'0');const stamp=new D
 const tagTask=(t,tag,phaseArr)=>({...t,_tag:tag,_phase:phaseArr[t.p]||''});
 icsAll.onclick=()=>{const L=[...S.tasks.filter(t=>!t.done&&t.d).map(t=>tagTask(t,'對保',PH)),...S.rTasks.filter(t=>!t.done&&t.d).map(t=>tagTask(t,'裝修',RP))];
  if(!L.length)return alert('還沒有設到期日的未完成待辦');dlICS(L,'對保與裝修待辦')};
+// ===== 下一步 =====
+function pickNext(){
+ const now=today();
+ const pool=[...S.tasks.map(t=>({...t,_tab:'todo',_tag:'對保'})),...S.rTasks.map(t=>({...t,_tab:'reno',_tag:'裝修'}))].filter(t=>!t.done);
+ const dated=pool.filter(t=>t.d).map(t=>({...t,n:Math.round((new Date(t.d)-now)/864e5)}));
+ const overdue=dated.filter(t=>t.n<=0).sort((a,b)=>a.n-b.n);
+ if(overdue.length)return{type:'task',item:overdue[0]};
+ const important=pool.filter(t=>!t.d&&t.r===1);
+ if(important.length)return{type:'task',item:important[0]};
+ const defects=S.insp.filter(x=>x.s===2);
+ if(defects.length)return{type:'defect',item:defects[0],count:defects.length};
+ const future=dated.filter(t=>t.n>0).sort((a,b)=>a.n-b.n);
+ if(future.length)return{type:'task',item:future[0]};
+ if(pool.length)return{type:'task',item:pool[0]};
+ return{type:'done'};
+}
+function renderNext(){
+ const r=pickNext();
+ if(r.type==='done'){nextBody.innerHTML='🎉 目前沒有待辦事項了，繼續保持！';return}
+ if(r.type==='defect'){nextBody.innerHTML=`<div data-gotab="insp" style="cursor:pointer"><b>【驗屋】${esc(r.item.t)}</b><div class="sub">${esc(r.item.a)}　還有 ${r.count} 項瑕疵待複驗，點這裡去處理 →</div></div>`;
+  nextBody.querySelector('[data-gotab]').onclick=()=>document.querySelector('nav button[data-t="insp"]').click();return}
+ const t=r.item,hint=t.d?(t.n<0?`<span class="late">已逾期 ${-t.n} 天</span>`:t.n===0?'<span class="late">今天到期</span>':`還有 ${t.n} 天`):(t.r===1?'重要・建議優先處理':'接下來該做的事');
+ nextBody.innerHTML=`<div data-gotab="${t._tab}" style="cursor:pointer"><b>【${t._tag}】${esc(t.t)}</b><div class="sub">${hint}</div></div>`;
+ nextBody.querySelector('[data-gotab]').onclick=()=>document.querySelector(`nav button[data-t="${t._tab}"]`).click();
+}
 // ===== 首頁三大流程總覽 =====
 function renderOverview(){
  const mk=(label,tab,done,total,hint)=>{const pct=total?Math.round(done/total*100):0;
@@ -805,10 +831,10 @@ function renderOverview(){
  overview.innerHTML=mk('① 對保準備','todo',tDone,tAll)+mk('② 驗屋','insp',iDone,iAll,iBadN?`⚠ ${iBadN} 項瑕疵`:'')+mk('③ 裝修','reno',rDone,rAll);
  overview.querySelectorAll('[data-ovtab]').forEach(el=>el.onclick=()=>document.querySelector(`nav button[data-t="${el.dataset.ovtab}"]`).click());
 }
-const _r=render;render=function(){_r();dueBanner();renderOverview()};
-const _ri=renderInsp;renderInsp=function(){_ri();renderOverview()};
-const _rr=renderReno;renderReno=function(){_rr();renderOverview()};
-renderOverview();
+const _r=render;render=function(){_r();dueBanner();renderOverview();renderNext()};
+const _ri=renderInsp;renderInsp=function(){_ri();renderOverview();renderNext()};
+const _rr=renderReno;renderReno=function(){_rr();renderOverview();renderNext()};
+renderOverview();renderNext();
 nStatus();dueBanner();notifyDue();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){dueBanner();notifyDue()}});
 if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js');
