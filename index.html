@@ -468,7 +468,9 @@ function calc(){
  `<div>貸款成數<b>${(+cAmt.value/ +cPrice.value*100||0).toFixed(1)}%</b></div>`;
  const tail=+cPrice.value-+cAmt.value-+xPaid.value;
  const fees=+xTax.value+ +xAg.value+ +xBank.value+ +xIns.value+ +xMisc.value;
- xOut.innerHTML=`<div>尾款差額（總價−貸款−已繳）<b>${tail.toFixed(1)} 萬</b></div><div>稅費雜支<b>${fees.toFixed(1)} 萬</b></div><div style="background:var(--warn2)">交屋前需準備現金<b style="color:var(--hi)">${(tail+fees).toFixed(1)} 萬</b></div>`;
+ const renoBud=(S.rBudget||[]).reduce((s,r)=>s+(+r.bud||0),0)/10000;
+ xOut.innerHTML=`<div>尾款差額（總價−貸款−已繳）<b>${tail.toFixed(1)} 萬</b></div><div>稅費雜支<b>${fees.toFixed(1)} 萬</b></div><div style="background:var(--warn2)">交屋前需準備現金<b style="color:var(--hi)">${(tail+fees).toFixed(1)} 萬</b></div>`+
+ (renoBud>0?`<div style="grid-column:1/-1;border-top:1px dashed var(--line);margin-top:6px;padding-top:10px"><div class="row" style="justify-content:space-between"><span>＋ 裝修預算合計（來自「裝修」頁）</span><b>${renoBud.toFixed(1)} 萬</b></div><div class="row" style="justify-content:space-between;margin-top:4px"><span>= 交屋＋裝修　總共需要準備</span><b style="color:var(--hi);font-size:1.2rem">${(tail+fees+renoBud).toFixed(1)} 萬</b></div></div>`:`<div class="sub" style="grid-column:1/-1">到「🛠 裝修」頁填好預算表後，這裡會自動加總交屋＋裝修的現金需求。</div>`);
  renderBank();
 }
 
@@ -834,7 +836,8 @@ function renderOverview(){
 const _r=render;render=function(){_r();dueBanner();renderOverview();renderNext()};
 const _ri=renderInsp;renderInsp=function(){_ri();renderOverview();renderNext()};
 const _rr=renderReno;renderReno=function(){_rr();renderOverview();renderNext()};
-renderOverview();renderNext();
+const _rb=renderBudget;renderBudget=function(){_rb();calc()};
+renderOverview();renderNext();calc();
 nStatus();dueBanner();notifyDue();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){dueBanner();notifyDue()}});
 if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js');
